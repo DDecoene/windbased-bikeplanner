@@ -80,43 +80,41 @@ def get_data_from_overpass():
         sys.exit(1)
 
 def find_adjacent_junctions(base_graph, junction_node_ids):
-    """For each junction, find its immediately adjacent junctions and the paths between them."""
-    junction_connections = {}
+    """
+    Finds the shortest path between a junction and its immediate neighbors
+    using a memory-safe, distance-limited search.
+    """
+    junction_connections = defaultdict(list)
+    junction_set = set(junction_node_ids)
     
     valid_junctions = [j for j in junction_node_ids if j in base_graph]
-    if len(junction_node_ids) - len(valid_junctions) > 0:
-        print(f"  Found {len(junction_node_ids) - len(valid_junctions)} isolated junctions (not connected to any ways)")
     
     for i, start_junction in enumerate(valid_junctions):
         if (i + 1) % 100 == 0:
             print(f"  Processing junction {i+1}/{len(valid_junctions)}...")
+
+        # --- MEMORY FIX ---
+        # The `cutoff=25` parameter is the crucial change. It prevents the Dijkstra
+        # search from exploring the entire graph, thus avoiding memory exhaustion.
+        # We assume no two adjacent junctions are more than 25km apart.
+        lengths, paths = nx.single_source_dijkstra(
+            base_graph, start_junction, weight='weight', cutoff=25
+        )
         
-        visited = set()
-        queue = deque([(start_junction, 0.0, [start_junction])])  # (node, distance, path_list)
-        adjacent_junctions = []
-        
-        while queue:
-            current_node, current_distance, path = queue.popleft()
-            
-            if current_node in visited: continue
-            visited.add(current_node)
-            
-            if current_node != start_junction and current_node in junction_node_ids:
-                adjacent_junctions.append((current_node, current_distance, path))
+        for end_node, path_list in paths.items():
+            if end_node == start_junction or end_node not in junction_set:
                 continue
+
+            is_direct_path = True
+            for intermediate_node in path_list[1:-1]:
+                if intermediate_node in junction_set:
+                    is_direct_path = False
+                    break
             
-            if current_node in base_graph:
-                for neighbor in base_graph.neighbors(current_node):
-                    if neighbor not in visited:
-                        edge_weight = base_graph[current_node][neighbor]['weight']
-                        new_distance = current_distance + edge_weight
-                        new_path = path + [neighbor]
-                        
-                        if new_distance < 50:
-                            queue.append((neighbor, new_distance, new_path))
-        
-        junction_connections[start_junction] = adjacent_junctions
-    
+            if is_direct_path:
+                distance = lengths[end_node]
+                junction_connections[start_junction].append((end_node, distance, path_list))
+
     return junction_connections
 
 def build_and_save_graph():
@@ -127,17 +125,14 @@ def build_and_save_graph():
     print("Parsing XML data...")
     root = ET.fromstring(xml_data)
 
-    # --- 1. Parse all nodes robustly ---
     print("Step 1/6: Parsing all nodes...")
     osm_id_to_node_data = {}
     junction_node_ids = set()
-    junctions_found_count = 0
 
     for node in root.findall('node'):
         node_id = int(node.get('id'))
         data = {'lat': float(node.get('lat')), 'lon': float(node.get('lon'))}
         
-        # CORRECT METHOD: Find the <tag> element with k='rcn_ref', then get its 'v' attribute.
         rcn_ref_tag = node.find("tag[@k='rcn_ref']")
         if rcn_ref_tag is not None:
             rcn_ref_value = rcn_ref_tag.get('v')
@@ -145,20 +140,14 @@ def build_and_save_graph():
                 data['rcn_ref'] = rcn_ref_value
                 junction_node_ids.add(node_id)
                 
-                if junctions_found_count < 5:
-                    print(f"  ... found junction: {rcn_ref_value} (Node ID: {node_id})")
-                junctions_found_count += 1
-                
         osm_id_to_node_data[node_id] = data
 
-    if junctions_found_count > 0: print() # Add a newline for cleaner output
     print(f"Found {len(osm_id_to_node_data)} total nodes, of which {len(junction_node_ids)} are junctions.")
     
     if not junction_node_ids:
         print("\n[CRITICAL ERROR] No junctions found. Cannot continue.", file=sys.stderr)
         sys.exit(1)
 
-    # --- 2. Build base graph from ways ---
     print("Step 2/6: Building base graph from ways...")
     base_graph = nx.Graph()
     for way in root.findall('way'):
@@ -173,11 +162,9 @@ def build_and_save_graph():
                     base_graph.add_edge(u_id, v_id, weight=distance)
     print(f"Base graph built with {base_graph.number_of_nodes()} nodes and {base_graph.number_of_edges()} edges.")
     
-    # --- 3. Find paths between adjacent junctions ---
-    print("Step 3/6: Finding paths between adjacent junctions...")
+    print("Step 3/6: Finding defined paths between adjacent junctions...")
     junction_connections = find_adjacent_junctions(base_graph, junction_node_ids)
     
-    # --- 4. Build final graph structure ---
     print("Step 4/6: Building final graph with detailed path edges...")
     final_graph = nx.Graph()
     for node_id, data in osm_id_to_node_data.items():
@@ -185,14 +172,16 @@ def build_and_save_graph():
             final_graph.add_node(node_id, **data)
 
     edges_added = 0
+    added_edges = set()
     for start_junction, adjacent_list in junction_connections.items():
         for end_junction, distance, path in adjacent_list:
-            if not final_graph.has_edge(start_junction, end_junction):
+            edge_tuple = tuple(sorted((start_junction, end_junction)))
+            if edge_tuple not in added_edges:
                 final_graph.add_edge(start_junction, end_junction, weight=distance, path=str(path))
+                added_edges.add(edge_tuple)
                 edges_added += 1
     print(f"Final graph structure built with {final_graph.number_of_nodes()} nodes and {edges_added} junction-to-junction edges.")
 
-    # --- 5. Prune graph to largest connected component ---
     print("Step 5/6: Pruning graph to largest connected component...")
     if edges_added == 0:
         print("[ERROR] Final graph has no edges. Exiting.", file=sys.stderr)
@@ -216,7 +205,6 @@ def build_and_save_graph():
     print(f"Removed {final_graph.number_of_nodes() - pruned_graph.number_of_nodes()} isolated nodes.")
     print(f"Final pruned graph has {pruned_graph.number_of_nodes()} nodes and {pruned_graph.number_of_edges()} edges.")
     
-    # --- 6. Save Final Graph ---
     print("Step 6/6: Saving final graph...")
     nx.write_graphml(pruned_graph, GRAPH_OUTPUT_FILE)
     print(f"\n[SUCCESS] Graph built and saved to '{GRAPH_OUTPUT_FILE}'")
