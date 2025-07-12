@@ -1,0 +1,89 @@
+{
+  "output": {
+    "directory": "./out",
+    "filename": "project_bundle.txt",
+    "timestamped": true
+  },
+  "files": {
+    "include": {
+      "asciidoc": [
+        ".adoc",
+        ".asc",
+        ".asciidoc"
+      ],
+      "code": [
+        ".py"
+      ],
+      "docs": [
+        ".md",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".csv"
+      ],
+      "config": [
+        ".json",
+        ".yml",
+        ".yaml",
+        ".toml"
+      ]
+    },
+    "exclude": {
+      "directories": [
+        "node_modules",
+        ".venv",
+        ".git",
+        "dist",
+        "build",
+        ".vercel",
+        ".github",
+        ".vscode"
+      ],
+      "files": [
+        ".env",
+        ".DS_Store",
+        "package-lock.json",
+        "yarn.lock",
+        ".gitignore",
+        "cpb.config.json",
+        ".cache.sqlite"
+      ],
+      "patterns": [
+        "*.log"
+      ]
+    },
+    "binary": {
+      "extensions": [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".pdf",
+        ".mp4",
+        ".mov",
+        ".zip",
+        ".tar",
+        ".gz"
+      ],
+      "maxSize": 1048576
+    }
+  },
+  "project": {
+    "mainFiles": [
+      "README.md"
+    ],
+    "typeRules": {
+      "node": [
+        "package.json"
+      ],
+      "python": [
+        "requirements.txt",
+        "setup.py"
+      ],
+      "asciidoc": [
+        ".adoc",
+        ".asc"
+      ]
+    }
+  }
+}
