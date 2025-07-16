@@ -1,0 +1,6 @@
+requests
+pandas
+networkx
+haversine
+osmnx
+numpy
