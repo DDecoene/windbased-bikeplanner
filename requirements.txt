@@ -4,3 +4,4 @@ networkx
 haversine
 osmnx
 numpy
+python-dotenv
