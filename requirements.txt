@@ -3,5 +3,7 @@ pandas
 networkx
 haversine
 osmnx
+folium
 numpy
+scikit-learn
 python-dotenv
