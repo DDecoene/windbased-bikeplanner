@@ -1,0 +1,26 @@
+/*
+This query finds the cycle node networks (knooppunten)
+in a 10km radius around the specified coordinates (near Kortrijk, BE).
+It fetches both the regional (rcn) and local (lcn) networks
+by finding the official route relations and then gathering all
+the paths and nodes that belong to them.
+*/
+[out:json][timeout:60];
+
+// Define the area of interest as a 10km radius
+// around latitude 50.8103, longitude 3.1876
+(
+  // Find all route relations for regional (rcn) or local (lcn)
+  // bicycle networks within the area.
+  relation(around:10000, 50.8103, 3.1876)[network~"^(r|l)cn$"][type=route][route=bicycle];
+
+  // Recurse down from the found relations to get all the
+  // ways (paths) that are members of these routes.
+  >>;
+);
+
+// From the ways we just found, get all the nodes that
+// make up those ways and include the original ways in the output.
+// The result is the complete geometry of the network.
+(._;>;);
+out;
