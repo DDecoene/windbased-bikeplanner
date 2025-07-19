@@ -6,3 +6,4 @@ overpass_cache.pkl
 flanders_cycling_network.graphml
 .env
 *.db
+visualisatie.html
