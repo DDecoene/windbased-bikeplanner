@@ -7,3 +7,4 @@ flanders_cycling_network.graphml
 .env
 *.db
 visualisatie.html
+.DS_Store
