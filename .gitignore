@@ -8,3 +8,4 @@ flanders_cycling_network.graphml
 *.db
 visualisatie.html
 .DS_Store
+__pycache__

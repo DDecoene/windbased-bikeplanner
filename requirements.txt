@@ -7,3 +7,5 @@ folium
 numpy
 scikit-learn
 python-dotenv
+streamlit
+streamlit-folium

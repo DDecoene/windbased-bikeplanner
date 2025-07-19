@@ -1,14 +1,15 @@
 [out:json][timeout:300];
-// Define the bounding box for Flanders: (south, west, north, east)
 (
-  // Find all cycle network nodes inside the bounding box
-  node["network:type"="node_network"]["rcn_ref"](50.7, 2.5, 51.5, 5.9);
-
-  // Find all cycle network relations inside the bounding box
+  // Find all cycle network relations within the bounding box for Flanders
   relation["type"="route"]["route"="bicycle"]["network"="rcn"](50.7, 2.5, 51.5, 5.9);
+)->.routes;
+
+// Get all ways and nodes that are part of these relations
+(
+  node(r.routes);
+  way(r.routes);
 );
 
-// Recurse down to get all ways and nodes belonging to the found relations
 out body;
 >;
 out skel qt;
