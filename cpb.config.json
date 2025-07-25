@@ -51,7 +51,8 @@
         "cpb.config.json",
         ".cache.sqlite",
         "fietsnetwerk_default.db",
-        "visualisatie.html"
+        "visualisatie.html",
+        "debug_diagnostic_map.html"
       ],
       "patterns": [
         "*.log"

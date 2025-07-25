@@ -1,41 +1,49 @@
- Windbased Bikeplanner 🚴‍♂️🌬️
+# Windbased Bikeplanner 🚴‍♂️🌬️
 
 **Repository:** [https://github.com/DDecoene/windbased-bikeplanner](https://github.com/DDecoene/windbased-bikeplanner)  
-**Status:** In Development
+**Status:** ⚠️ Under Heavy Development ⚠️
 
 A smart cycling route planner for Flanders, Belgium that generates optimal loop routes based on current wind conditions and the regional cycling node network (fietsknooppunten).
 
 ---
 
-## Features
+## ‼️ Current Development Status
 
-- **Wind-Aware Routing**: Generates routes that are optimized for cycling comfort based on real-time wind data.
-- **Junction-Based Navigation**: Uses the official Flemish cycling node network (RCN - Regionaal Cycling Network).
-- **Real-Time Data**: Fetches current wind conditions from the Open-Meteo API and network data from OpenStreetMap.
-- **Interactive Web Interface**: A user-friendly interface built with Streamlit for easy route planning.
-- **Data Persistence**: Creates a local SQLite database of the cycling network for fast, repeatable access.
+**This project is currently undergoing a major refactoring. The main application (`app.py`) is broken and will not run correctly.**
 
-## How It Works
+The core of the development work is focused on `graph_loader.py`, which is responsible for constructing a usable network graph from the raw database. This is a complex task, and we are working to make it robust against gaps and errors in the OpenStreetMap data.
 
-1.  **Start Location**: The user enters any location in Flanders (city, address, landmark).
-2.  **Distance Selection**: The user chooses their desired loop distance.
-3.  **Wind Analysis**: The app fetches live wind speed and direction for the location.
-4.  **Route Generation**: The backend algorithm calculates a loop route that:
-    -   Prioritizes cycling with a tailwind or crosswind at the start of the trip.
-    -   Saves the headwind sections for the return journey.
-    -   Uses the official cycling node network for clear navigation.
-    -   Matches the user's desired distance as closely as possible.
+Because the main application depends entirely on a functioning graph loader, other modules like `routing.py` and the `app.py` interface are currently non-functional.
+
+## ✅ Working Components
+
+While the main user-facing application is down, several key components and command-line tools are stable and working as intended.
+
+### Core Services
+*   `weather.py`: This module correctly fetches and formats real-time wind data from the Open-Meteo API.
+
+### Data & Debugging Tools
+These scripts are essential for the ongoing development and for diagnosing issues with the network data.
+
+*   **`build_database.py`**
+    *   **Purpose:** Connects to the Overpass API to download cycling network data for a specified region and saves it into a local SQLite database (`fietsnetwerk_default.db`). This is the first step.
+    *   **Usage:** `python build_database.py`
+
+*   **`visualize_db.py`**
+    *   **Purpose:** Generates a full, interactive map (`visualisatie_explorer.html`) of all the data in the database. It's useful for getting a high-level overview of the downloaded network.
+    *   **Usage:** `python visualize_db.py`
+
+*   **`debug_local_graph.py`**
+    *   **Purpose:** A powerful diagnostic tool to visualize why graph construction is failing in a specific area. It creates a map (`debug_diagnostic_map.html`) that colors paths green (successful) or red (broken), helping to pinpoint problematic data.
+    *   **Usage:** `python debug_local_graph.py`
+
+*   **`extract_relation_data.py`**
+    *   **Purpose:** If you find a broken relation ID using the debug map, this tool prints a detailed, human-readable report of all the ways and nodes that make up that single relation, which is crucial for deep analysis.
+    *   **Usage:** `python extract_relation_data.py <RELATION_ID>`
 
 ---
 
-## Installation & Setup
-
-### Prerequisites
-
--   Python 3.8+
--   A Git client
-
-### Setup Instructions
+## Setup for Developers
 
 1.  **Clone the repository:**
     ```bash
@@ -44,133 +52,66 @@ A smart cycling route planner for Flanders, Belgium that generates optimal loop 
     ```
 
 2.  **Install required packages:**
-    It is recommended to use a virtual environment.
+    (It is recommended to use a virtual environment)
     ```bash
     pip install -r requirements.txt
     ```
 
 3.  **Build the local cycling network database:**
-    This script downloads the latest cycling network data for Flanders from OpenStreetMap and stores it in a local SQLite database.
+    This script downloads the latest raw cycling network data from OpenStreetMap.
     ```bash
     python build_database.py
     ```
-    This will create a `fietsnetwerk_default.db` file in your project directory.
+    This will create a `fietsnetwerk_default.db` file.
 
-4.  **(Optional) Visualize the downloaded network:**
-    To verify that the database was created correctly, you can generate an interactive map.
-    ```bash
-    python visualize_db.py
-    ```
-    This will create a `visualisatie.html` file. Open it in your browser to see the network.
-
-5.  **Run the application:**
-    (Once `app.py` is created)
-    ```bash
-    streamlit run app.py
-    ```
+4.  **Use the diagnostic tools** to explore the data and contribute to fixing the `graph_loader.py` module.
 
 ---
 
-## Development Plan
+## How It's *Supposed* to Work (Future State)
 
-This is the task list for building the application.
-
-### Phase 1: Core Backend Logic & Data Integration
-*Goal: Establish the foundational data processing and core algorithms.*
-
--   [ ] **Step 1.1: Geocoding & Weather Module (`weather.py`)**
-    -   [ ] Create `get_coords_from_address(address)`.
-    -   [ ] Create `get_wind_data(lat, lon)` to call the Open-Meteo API.
-    -   [ ] Create helpers to format wind data for the UI.
-
--   [ ] **Step 1.2: Graph Loading Module (`graph_loader.py`)**
-    -   [ ] Create `load_graph_from_db(db_path)` to load data from `fietsnetwerk_default.db` into a `networkx` graph.
-
--   [ ] **Step 1.3: Wind-Effort Cost Function Module (`effort_calculator.py`)**
-    -   [ ] Create a function to calculate the bearing (direction) of each edge in the graph.
-    -   [ ] Create the core `calculate_effort_cost()` function that combines edge length with a wind penalty/bonus.
-    -   [ ] Create a main function to apply this cost as a `weight` attribute to every edge in the graph.
-
-### Phase 2: Routing Algorithm
-*Goal: Develop the algorithm to find the optimal loop.*
-
--   [ ] **Step 2.1: Find Start Node**
-    -   [ ] Create `find_closest_node(graph, lat, lon)` to map the user's address to a starting node in the network.
-
--   [ ] **Step 2.2: Candidate Loop Generation**
-    -   [ ] Implement the `find_optimal_loop(graph, start_node, target_length)` algorithm.
-    -   [ ] Use a heuristic: find "turnaround" nodes at roughly half the desired distance, calculate paths to and from them, and form loops.
-
--   [ ] **Step 2.3: Loop Selection**
-    -   [ ] From the generated candidate loops, filter for those closest to the target length.
-    -   [ ] From the filtered list, select the one with the lowest total effort cost.
-
-### Phase 3: Streamlit User Interface (`app.py`)
-*Goal: Build the user-facing application.*
-
--   [ ] **Step 3.1: Create UI Widgets**
-    -   [ ] Add `st.text_input` for address and `st.number_input` for length.
-    -   [ ] Add a "Generate Route" button.
-
--   [ ] **Step 3.2: Connect UI to Backend**
-    -   [ ] On button click, orchestrate the calls to the backend modules.
-    -   [ ] Use `@st.cache_resource` to cache the main graph object for performance.
-
--   [ ] **Step 3.3: Display Results**
-    -   [ ] Display wind data using `st.metric`.
-    -   [ ] Display the recommended route sequence and statistics.
-    -   [ ] Use `st.spinner` to show loading states.
-
--   [ ] **Step 3.4: Map Visualization**
-    -   [ ] Create a function to generate a `folium` map of the final route.
-    -   [ ] Render the map in the Streamlit app.
+Once development is complete, the application will:
+1.  Take a user's start location and desired loop distance.
+2.  Fetch live wind data for that location using `weather.py`.
+3.  Use the robust `graph_loader.py` to build a local network graph.
+4.  Calculate a route that minimizes effort against the wind, matches the desired distance, and uses the cycling node network for navigation.
+5.  Display the final route and junctions on an interactive map in the Streamlit app.
 
 ---
 
 ## Project Structure
 
-The project is organized as follows, separating data preparation from the main application logic.
-Use code with caution.
-Markdown
+Here is the current status of the key files in the project:
+
 windbased-bikeplanner/
-├── app.py # Main Streamlit application (to be created)
-├── build_database.py # Script to build the SQLite database from OSM data
-├── visualize_db.py # Utility to visualize the network from the database
+├── 📝 README.md # This file
+├── 📝 requirements.txt # Python dependencies
+├── 📝 overpass_query.txt # The Overpass query used to fetch data
 │
-├── fietsnetwerk_default.db # The SQLite database with network data (generated)
-├── visualisatie.html # Interactive map of the network (generated)
+├── 🟢 app.py # (BROKEN) Main Streamlit application
 │
-├── overpass_query.txt # The Overpass query used to fetch data
-├── requirements.txt # Python dependencies
-└── README.md # This file
-Generated code
+├── ✅ build_database.py # (WORKING) Script to download raw OSM data
+├── ✅ visualize_db.py # (WORKING) Utility to visualize all relations
+├── ✅ debug_local_graph.py # (WORKING) Utility to diagnose broken relations
+├── ✅ extract_relation_data.py # (WORKING) CLI tool for detailed relation reports
+│
+├── 🟡 graph_loader.py # (IN DEV) Core module being actively fixed
+├── 🟡 routing.py # (IN DEV) Depends on graph_loader
+├── 🟡 effort_calculator.py # (IN DEV) Depends on graph_loader
+├── ✅ weather.py # (WORKING) Module for fetching weather data
+│
+└── 🗃️ fietsnetwerk_default.db # The SQLite database (generated by build_database.py)
+
+
 ---
 
-## Configuration
+## Roadmap
 
--   **Geographic Area**: The area for which data is downloaded is defined by the bounding box in `overpass_query.txt`. You can modify this to cover other regions.
--   **Database Name**: The name of the SQLite database can be configured via a `.env` file (`DB_FILENAME=your_db_name.db`). The `build_database.py` script will use this variable.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
-### Development Setup
-
-1.  Fork the repository.
-2.  Create a feature branch: `git checkout -b feature-name`.
-3.  Make your changes and test them thoroughly.
-4.  Submit a pull request with a clear description of your changes.
-
-## Roadmap & Known Issues
-
--   **Known Issue:** The initial database build can take several minutes depending on the size of the geographic area.
--   **Roadmap:**
+-   **Immediate Goal:** Fix `graph_loader.py` to robustly handle broken or incomplete data from OSM.
+-   **Future Goals:**
     -   [ ] Support for other regions (e.g., Wallonia, Netherlands).
-    -   [ ] Integrate elevation data to create an even more accurate "effort" score.
-    -   [ ] Improve the mobile-responsive layout of the Streamlit app.
+    -   [ ] Integrate elevation data for an even more accurate "effort" score.
     -   [ ] Add GPX export functionality for the generated routes.
-    -   [ ] Analyze historical wind patterns for route planning on future dates.
 
 ## License
 

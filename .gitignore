@@ -9,3 +9,7 @@ flanders_cycling_network.graphml
 visualisatie.html
 .DS_Store
 __pycache__
+debug_local_graph_visualization.html
+relation_debug_data.csv
+debug_diagnostic_map.html
+overpass_cache

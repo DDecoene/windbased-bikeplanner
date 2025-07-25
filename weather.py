@@ -1,5 +1,5 @@
-
 import requests
+import numpy as np
 
 def get_coords_from_address(address: str) -> tuple[float, float] | None:
     """
@@ -73,13 +73,34 @@ def format_wind_data_for_ui(wind_data: dict) -> tuple[str, str]:
     if not wind_data:
         return "N/A", "N/A"
 
-    # Convert m/s to km/h
     speed_kmh = wind_data["speed"] * 3.6
-    
-    # Convert degrees to cardinal direction
     direction_deg = wind_data["direction"]
     dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
     ix = round(direction_deg / (360. / len(dirs)))
     direction_cardinal = dirs[ix % len(dirs)]
 
     return f"{speed_kmh:.1f} km/h", direction_cardinal
+
+def get_wind_arrow_html(direction_degrees: float) -> str:
+    """
+    Generates an HTML string for an SVG arrow rotated to show the direction of wind flow.
+
+    Args:
+        direction_degrees: The meteorological wind direction (where the wind comes FROM).
+
+    Returns:
+        An HTML string containing the correctly rotated SVG arrow.
+    """
+    # --- FIX IS HERE ---
+    # To point where the wind is going TO, we add 180 degrees to the meteorological direction.
+    visual_rotation = (direction_degrees + 180) % 360
+
+    arrow_svg = """
+    <svg width="24" height="24" viewBox="-12 -12 24 24">
+        <g transform="rotate({rotation})">
+            <path d="M 0 -10 L 8 0 L 2 0 L 2 8 L -2 8 L -2 0 L -8 0 Z" fill="#333333" />
+        </g>
+    </svg>
+    """
+    # Use the corrected visual_rotation in the format string.
+    return arrow_svg.format(rotation=visual_rotation)
