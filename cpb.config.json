@@ -40,10 +40,10 @@
         ".github",
         ".vscode",
         "cache",
+        "overpass_cache",
         "out"
       ],
       "files": [
-        ".env",
         ".DS_Store",
         "package-lock.json",
         "yarn.lock",

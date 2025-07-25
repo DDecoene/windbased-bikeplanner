@@ -1,15 +1,17 @@
 [out:json][timeout:300];
-(
-  // Find all cycle network relations within the bounding box for Flanders
-  relation["type"="route"]["route"="bicycle"]["network"="rcn"](50.7, 2.5, 51.5, 5.9);
-)->.routes;
 
-// Get all ways and nodes that are part of these relations
+// Define a union block to gather our initial items of interest.
 (
-  node(r.routes);
-  way(r.routes);
+  // 1. Get all nodes that are explicitly tagged as a cycling junction.
+  node(around:10000,50.8103,3.1876)["rcn_ref"];
+  
+  // 2. Get all cycle route relations.
+  relation(around:10000,50.8103,3.1876)["type"="route"]["route"="bicycle"]["network"="rcn"];
 );
 
+// From the set above (relations and explicit junction nodes), find all
+// component ways and their component nodes. This creates the complete set.
+(._;>;>>;);
+
+// Now, for EVERYTHING we have found, output the full data, including all tags.
 out body;
->;
-out skel qt;
