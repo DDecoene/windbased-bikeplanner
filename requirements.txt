@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+osmnx
+folium
+requests
+haversine
+numpy
+python-dotenv
+networkx
+pandas
