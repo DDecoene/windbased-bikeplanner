@@ -50,10 +50,7 @@
         ".gitignore",
         "cpb.config.json",
         ".cache.sqlite",
-        "fietsnetwerk_default.db",
-        "visualisatie.html",
-        "debug_diagnostic_map.html",
-        "diagnostic_map_healed.html"
+        "fietsnetwerk_default.db"
       ],
       "patterns": [
         "*.log"
