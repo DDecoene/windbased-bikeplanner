@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 class RouteRequest(BaseModel):
     start_address: str = Field(..., example="Grote Markt, Bruges, Belgium")
@@ -9,6 +9,27 @@ class WindData(BaseModel):
     speed: float = Field(..., description="Wind speed in m/s")
     direction: float = Field(..., description="Wind direction in degrees")
 
+# NEW: Model for timing data
+class TimingData(BaseModel):
+    total_duration: float
+    geocoding_and_weather: float
+    graph_download_and_prep: float
+    loop_finding_algorithm: float
+    route_finalizing: float
+
+# NEW: Model for debug statistics
+class DebugStats(BaseModel):
+    graph_nodes: int
+    graph_edges: int
+    candidate_spokes: int
+    loop_combinations_checked: int
+    best_loop_score: float
+
+# NEW: Container model for all debug info
+class DebugData(BaseModel):
+    timings: TimingData
+    stats: DebugStats
+
 class RouteResponse(BaseModel):
     start_address: str
     target_distance_km: float
@@ -17,3 +38,5 @@ class RouteResponse(BaseModel):
     route_geometry: List[List[Tuple[float, float]]] = Field(..., description="List of coordinate lists for drawing polylines on a map.")
     wind_conditions: WindData
     message: str
+    # MODIFIED: Add the optional debug data field
+    debug_data: Optional[DebugData] = None

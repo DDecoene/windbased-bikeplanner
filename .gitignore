@@ -122,3 +122,6 @@ dmypy.json
 overpass_cache/
 *.db
 *.html
+
+cache/
+out/

@@ -8,3 +8,4 @@ numpy
 python-dotenv
 networkx
 pandas
+scikit-learn
