@@ -1,139 +1,193 @@
-# graph_loader.py (The Definitive Version with Robust, Iterative Healing)
 
 import sqlite3
 import networkx as nx
 import pandas as pd
 from haversine import haversine, Unit
-from tqdm import tqdm
-from typing import Tuple, Optional
-import itertools
+from scipy.spatial import KDTree
+import os
+from collections import defaultdict
 
-# --- CONFIGURATION FOR THE HEALING MECHANISM ---
-# The maximum distance (in meters) for a gap to be automatically bridged.
+# --- CONSTANTS ---
+# The maximum gap size (in meters) that the healing logic is allowed to bridge.
 GAP_FIX_THRESHOLD_METERS = 250.0
 
-def load_local_graph_from_db(db_path: str, center_lat: float, center_lon: float,
-                           target_distance_km: float) -> nx.DiGraph | None:
+def _get_healed_path_for_relation(relation_id: int, from_node_id: int, to_node_id: int, con: sqlite3.Connection, node_coords_map: dict, is_debug: bool = False) -> tuple[list[int] | None, str]:
     """
-    Builds a local cycling network using the definitive hybrid approach.
-    Includes a robust, iterative "healing" mechanism to fix complex gaps in broken relations.
+    Attempts to build a complete, ordered path of node IDs for a single relation.
+    If the path is broken, it attempts to heal it by bridging a single gap.
+    
+    Returns a tuple containing the list of node IDs (or None on failure) and a status string.
     """
-    search_radius_km = max(target_distance_km * 0.8, 10)
-    print(f"--- Building local network with Definitive Hybrid Logic (Robust Healing) ---")
-    print(f"Search Radius: {search_radius_km:.1f}km around ({center_lat:.4f}, {center_lon:.4f})")
+    # Fetch all way and node components for this specific relation.
+    query = """
+        SELECT rm.way_id, wn.node_id
+        FROM relation_members rm
+        JOIN way_nodes wn ON rm.way_id = wn.way_id
+        WHERE rm.relation_id = ?
+        ORDER BY rm.sequence_id, wn.sequence_id;
+    """
+    group = pd.read_sql_query(query, con, params=(relation_id,))
+    
+    if group.empty:
+        return None, "NO_DATA"
+
+    # Build a subgraph containing all nodes and ways for this relation.
+    sub_graph = nx.Graph()
+    for _, way_group in group.groupby('way_id'):
+        nx.add_path(sub_graph, way_group['node_id'].tolist())
+
+    # --- Initial Pathfinding Attempt ---
+    try:
+        if from_node_id not in sub_graph or to_node_id not in sub_graph:
+            return None, "BROKEN (Start/End Node Missing From Ways)"
+        ordered_path_nodes = nx.shortest_path(sub_graph, source=from_node_id, target=to_node_id)
+        return ordered_path_nodes, "SUCCESS"
+    except nx.NetworkXNoPath:
+        pass # This is expected for broken relations, proceed to healing.
+    
+    # --- Healing Logic ---
+    if is_debug:
+        print(f"\n[DEBUG] Relation {relation_id}: Initial pathfinding failed. Entering healing logic.")
+
+    try:
+        components = list(nx.connected_components(sub_graph))
+        if len(components) < 2:
+            return None, "BROKEN (Not Enough Components to Bridge)"
+
+        start_comp = next((c for c in components if from_node_id in c), None)
+        end_comp = next((c for c in components if to_node_id in c), None)
+
+        if not start_comp or not end_comp or start_comp is end_comp:
+            return None, "BROKEN (Endpoints Missing or in Same Fractured Component)"
+
+        # Use KD-Tree for efficient nearest neighbor search between the two components.
+        start_nodes = list(start_comp)
+        end_nodes = list(end_comp)
+        start_coords = [node_coords_map[n] for n in start_nodes if n in node_coords_map]
+        end_coords = [node_coords_map[n] for n in end_nodes if n in node_coords_map]
+
+        if not start_coords or not end_coords:
+             return None, "BROKEN (Coordinate Data Missing for Healing)"
+
+        kdtree = KDTree(end_coords)
+        distances, indices = kdtree.query(start_coords, k=1)
+        
+        best_start_idx = distances.argmin()
+        p1 = start_coords[best_start_idx]
+        p2 = end_coords[indices[best_start_idx]]
+        dist_m = haversine(p1, p2, unit=Unit.METERS)
+
+        if dist_m < GAP_FIX_THRESHOLD_METERS:
+            bridge_node_1 = start_nodes[best_start_idx]
+            bridge_node_2 = end_nodes[indices[best_start_idx]]
+            sub_graph.add_edge(bridge_node_1, bridge_node_2)
+            
+            final_path = nx.shortest_path(sub_graph, source=from_node_id, target=to_node_id)
+            if is_debug: print(f"[DEBUG] Relation {relation_id}: SUCCESS! Path healed by bridging {dist_m:.1f}m gap.")
+            return final_path, "HEALED"
+        else:
+            if is_debug: print(f"[DEBUG] Relation {relation_id}: Healing failed. Gap of {dist_m:.1f}m exceeds threshold.")
+            return None, "BROKEN (Gap Too Large)"
+
+    except Exception:
+        return None, "BROKEN (Error in Healing Logic)"
+
+
+def load_local_graph_from_db(db_path: str, center_lat: float, center_lon: float, target_distance_km: float, debug_relation_ids: list = None) -> nx.DiGraph | None:
+    """
+    Loads a geographically-limited, healed cycling network graph from the database.
+    """
+    print("--- Loading Local Graph ---")
+    if not os.path.exists(db_path):
+        print(f"[ERROR] Database not found at '{db_path}'")
+        return None
 
     try:
         con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-        junctions_query = "SELECT j.number, j.node_id, n.lat, n.lon FROM junctions j JOIN nodes n ON j.node_id = n.id"
-        all_junctions_df = pd.read_sql_query(junctions_query, con)
-        distances = all_junctions_df.apply(lambda r: haversine((center_lat, center_lon), (r['lat'], r['lon']), unit=Unit.KILOMETERS), axis=1)
-        local_junctions_df = all_junctions_df[distances <= search_radius_km].copy()
-        if len(local_junctions_df) < 3: con.close(); return None
-        local_osm_ids_list = local_junctions_df['node_id'].tolist()
-        print(f"Found {len(local_junctions_df)} junctions. Fetching their connection data...")
-        placeholders = ', '.join(['?'] * len(local_osm_ids_list))
-        path_components_query = f"""
-            SELECT r.id as relation_id, r.from_node_id, r.to_node_id, wn.way_id, wn.node_id, n.lat, n.lon
-            FROM relations r JOIN relation_members rm ON r.id = rm.relation_id JOIN way_nodes wn ON rm.way_id = wn.way_id JOIN nodes n ON wn.node_id = n.id
-            WHERE r.from_node_id IN ({placeholders}) OR r.to_node_id IN ({placeholders})
-        """
-        path_components_df = pd.read_sql_query(path_components_query, con, params=local_osm_ids_list * 2)
-        con.close()
-        if path_components_df.empty: return None
-    except Exception as e:
-        print(f"Error during data loading: {e}"); return None
-
-    G = nx.DiGraph()
-    full_junc_map = all_junctions_df.set_index('node_id')['number'].to_dict()
-    node_coords_map = path_components_df.drop_duplicates('node_id').set_index('node_id')[['lat', 'lon']].to_dict('index')
-    all_relation_junction_ids = set(path_components_df['from_node_id']).union(set(path_components_df['to_node_id']))
-    for junc_id in all_relation_junction_ids:
-        if junc_id in node_coords_map and junc_id in full_junc_map:
-             G.add_node(full_junc_map[junc_id], osm_node_id=junc_id, lat=node_coords_map[junc_id]['lat'], lon=node_coords_map[junc_id]['lon'])
-    
-    relation_groups = path_components_df.groupby('relation_id')
-    
-    print(f"Assembling {len(relation_groups)} potential paths...")
-    healed_count = 0
-    for relation_id, group in tqdm(relation_groups, desc="Assembling paths"):
-        start_node_id = group['from_node_id'].iloc[0]
-        end_node_id = group['to_node_id'].iloc[0]
-        sub_graph = nx.Graph()
-        for way_id, way_group in group.groupby('way_id'):
-            nx.add_path(sub_graph, way_group['node_id'].tolist())
         
-        if not (start_node_id in sub_graph and end_node_id in sub_graph): continue
+        # 1. Pre-load all node coordinates into memory for distance calculations.
+        nodes_df = pd.read_sql_query("SELECT id, lat, lon FROM nodes", con)
+        node_coords_map = {row.id: (row.lat, row.lon) for row in nodes_df.itertuples()}
+        
+        # 2. Define a search radius and find all junctions within it.
+        search_radius_m = max(target_distance_km * 1000 * 0.8, 10000) # 80% of target, but at least 10km
+        
+        all_junctions_df = pd.read_sql_query("SELECT node_id, number FROM junctions", con)
+        
+        local_junction_ids = []
+        for j_id in all_junctions_df['node_id']:
+            if j_id in node_coords_map:
+                dist = haversine((center_lat, center_lon), node_coords_map[j_id], unit=Unit.METERS)
+                if dist <= search_radius_m:
+                    local_junction_ids.append(j_id)
+        
+        if not local_junction_ids:
+            print("[WARN] No cycling junctions found within the search radius.")
+            return None
+        
+        # 3. Get all relations that connect two of our local junctions.
+        local_junctions_str = ",".join(map(str, local_junction_ids))
+        relations_query = f"""
+            SELECT id, from_node_id, to_node_id FROM relations
+            WHERE from_node_id IN ({local_junctions_str}) AND to_node_id IN ({local_junctions_str})
+        """
+        relations_df = pd.read_sql_query(relations_query, con)
 
-        try:
-            ordered_path_nodes = nx.shortest_path(sub_graph, source=start_node_id, target=end_node_id)
-        except nx.NetworkXNoPath:
-            # --- START OF DEFINITIVE HEALING LOGIC ---
-            try:
-                components = [c for c in nx.connected_components(sub_graph)]
-                main_component = next(c for c in components if start_node_id in c)
-                components.remove(main_component)
+        # 4. Build the final, directed graph.
+        G = nx.DiGraph()
+        stats = defaultdict(int)
 
-                while end_node_id not in main_component and components:
-                    min_dist = float('inf')
-                    bridge_to_add = None
-                    component_to_merge = None
+        # Add nodes to the graph
+        for j_id in local_junction_ids:
+            G.add_node(j_id, lat=node_coords_map[j_id][0], lon=node_coords_map[j_id][1])
+            
+        # Process each relation to create graph edges
+        for _, rel in relations_df.iterrows():
+            is_debug = debug_relation_ids and rel.id in debug_relation_ids
+            path_nodes, status = _get_healed_path_for_relation(rel.id, rel.from_node_id, rel.to_node_id, con, node_coords_map, is_debug)
+            
+            stats[status] += 1
+            
+            if path_nodes:
+                # Calculate path geometry and length
+                geometry = [node_coords_map[node_id] for node_id in path_nodes if node_id in node_coords_map]
+                length = sum(haversine(p1, p2, unit=Unit.METERS) for p1, p2 in zip(geometry, geometry[1:]))
 
-                    for other_component in components:
-                        for node1, node2 in itertools.product(main_component, other_component):
-                            p1 = (node_coords_map[node1]['lat'], node_coords_map[node1]['lon'])
-                            p2 = (node_coords_map[node2]['lat'], node_coords_map[node2]['lon'])
-                            dist = haversine(p1, p2, unit=Unit.METERS)
-                            if dist < min_dist:
-                                min_dist = dist
-                                bridge_to_add = (node1, node2)
-                                component_to_merge = other_component
-                    
-                    if bridge_to_add and min_dist < GAP_FIX_THRESHOLD_METERS:
-                        sub_graph.add_edge(bridge_to_add[0], bridge_to_add[1])
-                        main_component.update(component_to_merge)
-                        components.remove(component_to_merge)
-                    else:
-                        raise nx.NetworkXNoPath # Gap is too large, cannot continue healing
-                
-                ordered_path_nodes = nx.shortest_path(sub_graph, source=start_node_id, target=end_node_id)
-                healed_count += 1
-            except (nx.NetworkXNoPath, StopIteration, KeyError):
-                continue
-            # --- END OF DEFINITIVE HEALING LOGIC ---
+                if length > 0:
+                    # Add forward edge
+                    G.add_edge(rel.from_node_id, rel.to_node_id, length=length, geometry=geometry)
+                    # Add reverse edge
+                    G.add_edge(rel.to_node_id, rel.from_node_id, length=length, geometry=geometry[::-1])
 
-        path_length, path_geometry = _calculate_path_data(ordered_path_nodes, node_coords_map)
-        if path_length > 1:
-            u = full_junc_map[start_node_id]
-            v = full_junc_map[end_node_id]
-            G.add_edge(u, v, length=path_length, geometry=path_geometry)
-            G.add_edge(v, u, length=path_length, geometry=path_geometry[::-1])
+    except Exception as e:
+        print(f"[ERROR] Failed to load graph from database: {e}")
+        return None
+    finally:
+        if con:
+            con.close()
 
-    isolated_nodes = [node for node, degree in G.degree() if degree == 0]
-    G.remove_nodes_from(isolated_nodes)
+    print(f"--- Graph Loading Complete ---")
+    print(f"Local junctions found: {len(local_junction_ids)}")
+    print(f"Relations processed: {len(relations_df)} ({stats['SUCCESS']} successful, {stats['HEALED']} healed, {len(relations_df) - stats['SUCCESS'] - stats['HEALED']} broken)")
+    print(f"Final graph: {G.number_of_nodes()} nodes, {G.number_of_edges()} directed edges.")
     
-    print(f"\n--- Local Network Built Successfully ---")
-    if healed_count > 0:
-        print(f"Successfully healed {healed_count} broken relation(s).")
-    print(f"Final Graph: {G.number_of_nodes()} connected junctions and {G.number_of_edges()} connections.")
-    return G
-
-def _calculate_path_data(node_sequence: list, node_coords_map: dict) -> Tuple[float, list]:
-    total_length = 0.0; coordinates = []
-    for i, node_id in enumerate(node_sequence):
-        node_data = node_coords_map.get(node_id)
-        if not node_data: continue
-        current_point = (node_data['lat'], node_data['lon']); coordinates.append(current_point)
-        if i > 0:
-            prev_node_data = node_coords_map.get(node_sequence[i-1])
-            if prev_node_data:
-                prev_point = (prev_node_data['lat'], prev_node_data['lon'])
-                total_length += haversine(prev_point, current_point, unit=Unit.METERS)
-    return total_length, coordinates
-
-def find_closest_node_in_local_graph(G: nx.DiGraph, lat: float, lon: float) -> Optional[str]:
     if not G.nodes: return None
-    min_dist = float('inf'); closest_node = None
-    for node, data in G.nodes(data=True):
-        dist = haversine((lat, lon), (data['lat'], data['lon']))
-        if dist < min_dist: min_dist = dist; closest_node = node
+    
+    # Return the largest connected component to ensure routability
+    largest_cc = max(nx.weakly_connected_components(G), key=len)
+    return G.subgraph(largest_cc).copy()
+
+
+def find_closest_node_in_local_graph(G: nx.Graph, lat: float, lon: float) -> int | None:
+    """Finds the closest node in the graph to a given latitude and longitude."""
+    if not G or not G.nodes:
+        return None
+    
+    # The graph nodes are the junctions, which already have lat/lon data
+    nodes_with_coords = {node: (data['lat'], data['lon']) for node, data in G.nodes(data=True)}
+
+    closest_node = min(
+        nodes_with_coords.keys(),
+        key=lambda node: haversine((lat, lon), nodes_with_coords[node], unit=Unit.METERS)
+    )
     return closest_node
