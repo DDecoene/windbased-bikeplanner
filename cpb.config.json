@@ -40,8 +40,9 @@
         ".github",
         ".vscode",
         "cache",
-        "overpass_cache",
-        "out"
+        "osmnx_cache",
+        "out",
+        "__pycache__"
       ],
       "files": [
         ".DS_Store",

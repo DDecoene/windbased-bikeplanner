@@ -14,8 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -119,9 +117,9 @@ dmypy.json
 .pyre/
 
 # Overpass cache and DB
-overpass_cache/
-*.db
-*.html
+osmnx_cache
 
 cache/
 out/
+cache_*
+.DS_Store

@@ -9,12 +9,14 @@
 def configure_osmnx_caching():
     """Sets up osmnx caching settings."""
     import osmnx as ox
-    # Example: configure osmnx to use a specific directory and log progress
-    ox.config(
-        cache_folder="./osmnx_cache",
-        log_console=True,
-        use_cache=True
-    )
+
+    # The ox.config() function was deprecated and removed.
+    # Settings are now configured directly on the settings module.
+    # See: https://osmnx.readthedocs.io/en/stable/user-reference.html#osmnx-settings-module
+    ox.settings.cache_folder = "./osmnx_cache"
+    ox.settings.log_console = True
+    ox.settings.use_cache = True
+    
     print("osmnx caching configured.")
 
 # You would call this function at the startup of your FastAPI app.

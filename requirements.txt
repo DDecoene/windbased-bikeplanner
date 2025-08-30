@@ -1,11 +1,14 @@
 fastapi
 uvicorn[standard]
 osmnx
-folium
-requests
 haversine
 numpy
 python-dotenv
-networkx
 pandas
 scikit-learn
+streamlit>=1.31
+requests>=2.31
+networkx>=3.2
+geopy>=2.4
+folium>=0.15
+streamlit-folium>=0.18
