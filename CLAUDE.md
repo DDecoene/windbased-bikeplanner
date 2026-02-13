@@ -49,7 +49,9 @@ pnpm lint            # prettier --check
 **Frontend (`ui/`)**
 - SvelteKit app (Svelte 5, Tailwind CSS v4, pnpm, adapter-node).
 - Dark theme with cyan accents, CARTO Voyager map tiles.
-- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download.
+- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download. Footer with Privacy + Contact links.
+- `src/routes/privacy/+page.svelte` — Static privacy policy page (no cookies, no analytics, third-party API disclosure).
+- `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
 - `src/lib/api.ts` — API client with TypeScript types, 120s request timeout. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
 - `src/app.html` — Static OG/Twitter meta tags for social sharing.
 

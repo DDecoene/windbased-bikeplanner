@@ -83,6 +83,8 @@ app/
   models.py      — Pydantic request/response models
   notify.py      — Telegram ops alerts (optional)
 ui/
-  src/routes/    — SvelteKit pages
-  src/lib/       — API client and types
+  src/routes/          — SvelteKit pages (home, privacy, contact)
+  src/routes/privacy/  — Privacy policy page
+  src/routes/contact/  — Contact page with FAQ accordion
+  src/lib/             — API client and types
 ```

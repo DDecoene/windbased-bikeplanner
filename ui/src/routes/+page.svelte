@@ -471,3 +471,9 @@
 		/>
 	</div>
 </main>
+
+<footer class="mx-auto w-full max-w-5xl px-4 pb-6 pt-2 text-center text-xs text-gray-600">
+	<a href="/privacy" class="hover:text-gray-400 transition">Privacy Policy</a>
+	<span class="mx-2">·</span>
+	<a href="/contact" class="hover:text-gray-400 transition">Contact</a>
+</footer>

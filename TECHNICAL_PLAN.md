@@ -48,15 +48,23 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 | 12 | Error retry | ✅ Done | 2 retries with exponential backoff on timeout/connection/429/503/504 |
 | 13 | Request timeout | ✅ Done | 120s AbortController on frontend fetch, user-friendly error message |
 
+## Should-Have (Continued)
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| 14 | Privacy policy page | ✅ Done | `/privacy` — no accounts, no cookies, no analytics, third-party API disclosure |
+| 15 | Contact page | ✅ Done | `/contact` — email + FAQ accordion (Svelte 5 `$state`), dark theme |
+| 16 | Footer links | ✅ Done | Privacy + Contact links in main page footer |
+
 ## Nice-to-Have (Phase 2)
 
 | # | What | Why |
 |---|------|-----|
-| 14 | PWA manifest | Installable on phones, add to home screen |
-| 15 | Netherlands support | Remove `countrycodes=be` restriction, same Overpass approach works |
-| 16 | Wind forecast | Show best day to ride this week using multi-day forecast |
-| 17 | User accounts | Route history, favorites, preferences |
-| 18 | Analytics | Plausible or Umami (privacy-friendly, self-hostable) |
+| 17 | PWA manifest | Installable on phones, add to home screen |
+| 18 | Netherlands support | Remove `countrycodes=be` restriction, same Overpass approach works |
+| 19 | Wind forecast | Show best day to ride this week using multi-day forecast |
+| 20 | User accounts | Route history, favorites, preferences |
+| 21 | Analytics | Plausible or Umami (privacy-friendly, self-hostable) |
 
 ## Current Production Gaps
 
@@ -102,3 +110,6 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Add OG meta tags for social sharing
 - [x] Add error retry with exponential backoff
 - [x] Add frontend request timeout (120s)
+- [x] Add privacy policy page (`/privacy`)
+- [x] Add contact page with FAQ accordion (`/contact`)
+- [x] Add footer with Privacy + Contact links
