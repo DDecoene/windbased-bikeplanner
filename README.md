@@ -43,25 +43,41 @@ pnpm dev
 ## Tech Stack
 
 **Backend**
-- Python 3.12, FastAPI
+- Python 3.12, FastAPI, slowapi (rate limiting)
 - Overpass API for fietsknooppunten network data
 - networkx for graph operations and routing
 - Open-Meteo for real-time wind data
 - Nominatim for geocoding (restricted to Belgium)
+- Structured logging, Telegram ops alerts (optional)
 
 **Frontend**
 - SvelteKit (Svelte 5), Tailwind CSS v4
 - Leaflet for map rendering (CARTO Voyager tiles)
 
+**Infrastructure**
+- Docker Compose with non-root containers and resource limits
+- Watchdog health monitor with Telegram alerting
+- Overpass disk cache with auto-cleanup (1 week TTL, 500MB cap)
+
+## Configuration
+
+| Env var | Description | Default |
+|---------|-------------|---------|
+| `CORS_ORIGINS` | Comma-separated allowed origins | localhost:5173, :3000 |
+| `VITE_API_URL` | Backend URL for frontend | `/api` |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token for alerts | _(disabled)_ |
+| `TELEGRAM_CHAT_ID` | Telegram chat ID for alerts | _(disabled)_ |
+
 ## Project Structure
 
 ```
 app/
-  main.py        — FastAPI app, single POST /generate-route endpoint
+  main.py        — FastAPI app, CORS, rate limiting, structured logging
   routing.py     — Wind-weighted loop finding on condensed knooppunt graph
-  overpass.py    — Overpass API client, networkx graph builder, disk cache (1 week TTL)
+  overpass.py    — Overpass API client, networkx graph builder, disk cache
   weather.py     — Nominatim geocoding + Open-Meteo wind data
   models.py      — Pydantic request/response models
+  notify.py      — Telegram ops alerts (optional)
 ui/
   src/routes/    — SvelteKit pages
   src/lib/       — API client and types

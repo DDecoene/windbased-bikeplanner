@@ -7,6 +7,8 @@ services:
       - overpass_cache:/app/overpass_cache
     env_file:
       - .env
+    mem_limit: 512m
+    cpus: 1.0
     restart: unless-stopped
 
   frontend:
@@ -15,6 +17,8 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+    mem_limit: 256m
+    cpus: 0.5
     restart: unless-stopped
 
   watchdog:
@@ -27,6 +31,8 @@ services:
     depends_on:
       - backend
       - frontend
+    mem_limit: 64m
+    cpus: 0.25
     restart: unless-stopped
 
 volumes:

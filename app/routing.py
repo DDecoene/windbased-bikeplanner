@@ -1,9 +1,12 @@
+import logging
 import networkx as nx
 import numpy as np
 import time
 from . import weather
 from . import overpass
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 
 # --- Wind Effort Calculation ---
@@ -179,6 +182,8 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     timings = {}
     stats = {}
 
+    logger.info("Route aanvraag: '%s', %.1f km", start_address, distance_km)
+
     # --- Stap 1: Geocoding & Weather (cached) ---
     coords = weather.get_coords_from_address(start_address)
     if not coords:
@@ -247,6 +252,7 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     t_step = time.perf_counter()
 
     if not best_loop:
+        logger.warning("Geen lus gevonden voor '%s' (%.1f km)", start_address, distance_km)
         raise ValueError("Kon geen geschikte lus vinden. Probeer een andere afstand of startpunt.")
 
     # --- Stap 4: Route samenstellen ---
@@ -285,6 +291,9 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
 
     timings['route_finalizing'] = time.perf_counter() - t_step
     timings['total_duration'] = time.perf_counter() - t_start
+
+    logger.info("Route gevonden: %.1f km, %d knooppunten, %.2fs",
+                actual_distance_m / 1000, len(junctions), timings['total_duration'])
 
     # --- Stap 5: Response ---
     response = {

@@ -5,7 +5,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN useradd --create-home appuser
 COPY app/ app/
+RUN mkdir -p /app/overpass_cache && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 8000
 

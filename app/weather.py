@@ -1,6 +1,9 @@
+import logging
 import time
 import requests
 from typing import Optional, Tuple, Dict
+
+logger = logging.getLogger(__name__)
 
 # Simple in-memory TTL caches
 _GEOCODE_CACHE: Dict[str, tuple[float, float]] = {}
@@ -46,6 +49,7 @@ def get_coords_from_address(address: str) -> Optional[tuple[float, float]]:
             return coords
         return None
     except (requests.RequestException, IndexError, KeyError) as e:
+        logger.error("Nominatim geocoding fout: %s", e)
         from .notify import send_alert
         send_alert(f"Nominatim geocoding fout: {e}")
         return None
@@ -79,6 +83,7 @@ def get_wind_data(lat: float, lon: float) -> Optional[dict]:
         _WIND_TTL[loc] = _now() + WIND_TTL_SECONDS
         return wind
     except (requests.RequestException, KeyError) as e:
+        logger.error("Open-Meteo wind API fout: %s", e)
         from .notify import send_alert
         send_alert(f"Open-Meteo wind API fout: {e}")
         return None

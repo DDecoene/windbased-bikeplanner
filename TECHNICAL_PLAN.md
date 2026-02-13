@@ -27,17 +27,17 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 ## Must-Have (Before Launch)
 
-| # | What | Why | Effort |
-|---|------|-----|--------|
-| 1 | Environment config | CORS origins, API URL, cache dir are all hardcoded for localhost | 1-2h |
-| 2 | Caddy reverse proxy | SSL/HTTPS, route domain → frontend, domain/api → backend | 1h |
-| 3 | Runtime API URL | Frontend bakes backend URL at build time — needs `/api` proxy or config endpoint | 1h |
-| 4 | Health endpoint | `/health` so Docker restarts crashed containers | 10min |
-| 5 | Structured logging | Replace `print()` with proper logger for production debugging | 30min |
-| 6 | Rate limiting | `slowapi` middleware to prevent abuse of Overpass/Nominatim | 30min |
-| 7 | Input validation | Cap `start_address` length, sanitize input | 15min |
-| 8 | Docker hardening | Non-root user, restart policies, resource limits | 15min |
-| 9 | Cache cleanup | Overpass cache grows forever — add max size or age-based cleanup | 30min |
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| 1 | Environment config | ✅ Done | `CORS_ORIGINS` env var, falls back to localhost defaults |
+| 2 | Caddy reverse proxy | ⏳ Pending | Will add when domain is ready |
+| 3 | Runtime API URL | ✅ Done | Falls back to `/api` for future proxy, `VITE_API_URL` overrides |
+| 4 | Health endpoint | ✅ Done | `GET /health` returns `{"status": "ok"}` |
+| 5 | Structured logging | ✅ Done | `logging` module in all backend modules, structured format |
+| 6 | Rate limiting | ✅ Done | `slowapi` — 10 req/min per IP on `/generate-route`, 429 response |
+| 7 | Input validation | ✅ Done | `max_length=200` on `start_address` |
+| 8 | Docker hardening | ✅ Done | Non-root `appuser`, `mem_limit`/`cpus` on all services |
+| 9 | Cache cleanup | ✅ Done | Expired file cleanup + 500MB cap on each write |
 
 ## Should-Have (First Week After Launch)
 
@@ -60,45 +60,42 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 ## Current Production Gaps
 
-### Critical
+### Resolved
 
-- **CORS origins** — hardcoded to localhost only, will fail on real domain
-- **Frontend API URL** — baked at build time via `VITE_API_URL`, cannot change at runtime
-- **No logging** — only `print()` statements, cannot debug production issues
-- **No health checks** — Docker/orchestrators cannot monitor app lifecycle
+- ~~CORS origins~~ — configurable via `CORS_ORIGINS` env var
+- ~~Frontend API URL~~ — falls back to `/api`, overridable via `VITE_API_URL`
+- ~~No logging~~ — structured logging with `logging` module in all backend modules
+- ~~No health checks~~ — `GET /health` endpoint
+- ~~No rate limiting~~ — slowapi, 10 req/min per IP
+- ~~Overpass cache unbounded~~ — cleanup on write, expired + 500MB cap
+- ~~No input sanitization~~ — `max_length=200` on `start_address`
+- ~~Docker runs as root~~ — non-root `appuser` in both Dockerfiles
+- ~~No resource limits~~ — `mem_limit`/`cpus` on all services
 
-### High
+### Remaining
 
-- **No rate limiting** — unprotected against abuse, could hit Overpass API limits
-- **No restart policies** — containers don't recover from crashes
-- **Overpass cache** — relative path (`./overpass_cache`), unbounded growth, no cleanup
+- **Caddy reverse proxy** — waiting for domain registration
 - **In-memory caches** — lost on restart, unbounded growth, not thread-safe across workers
 - **Sync internals** — async endpoint but all HTTP calls are synchronous (blocks thread pool)
-
-### Medium
-
-- **No input sanitization** — `start_address` has no length limit
-- **Docker runs as root** — no non-root user in Dockerfiles
-- **No resource limits** — containers can consume all VPS memory/CPU
 - **No PWA manifest** — not installable on mobile
 - **No OG/social meta tags** — poor social media shareability
 
 ## Deployment Checklist
 
+- [x] Externalize all config to environment variables (.env file)
+- [x] Switch frontend API calls to relative `/api/` path
+- [x] Add `/health` endpoint to backend
+- [x] Add structured logging (replace print statements)
+- [x] Add rate limiting middleware
+- [x] Add input validation (address length cap)
+- [x] Harden Dockerfiles (non-root user)
+- [x] Add restart policies and resource limits to docker-compose
+- [x] Add cache cleanup (max age or max size)
 - [ ] Register domain (rgwnd.app or similar)
 - [ ] Provision Hetzner CX22 VPS
 - [ ] Install Docker + Docker Compose on VPS
 - [ ] Add Caddy service to docker-compose.yml
 - [ ] Configure Caddy: domain → frontend, domain/api → backend, auto-SSL
-- [ ] Externalize all config to environment variables (.env file)
-- [ ] Switch frontend API calls to relative `/api/` path
-- [ ] Add `/health` endpoint to backend
-- [ ] Add structured logging (replace print statements)
-- [ ] Add rate limiting middleware
-- [ ] Add input validation (address length cap)
-- [ ] Harden Dockerfiles (non-root user)
-- [ ] Add restart policies and resource limits to docker-compose
-- [ ] Add cache cleanup (max age or max size)
 - [ ] Point DNS to Hetzner VPS
 - [ ] Verify SSL works
 - [ ] Test full flow on production domain

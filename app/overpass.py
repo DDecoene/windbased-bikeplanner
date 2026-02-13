@@ -7,6 +7,7 @@ een networkx.MultiDiGraph met rcn_ref nodes, haversine edge-lengtes en bearings.
 
 import hashlib
 import json
+import logging
 import math
 import os
 import time
@@ -15,6 +16,8 @@ from typing import Optional
 
 import networkx as nx
 import requests
+
+logger = logging.getLogger(__name__)
 
 # --- Cache config ---
 CACHE_DIR = Path("./overpass_cache")
@@ -44,11 +47,48 @@ def _read_cache(key: str) -> Optional[dict]:
         return None
 
 
+CACHE_MAX_BYTES = 500 * 1024 * 1024  # 500 MB
+
+
+def _cleanup_cache() -> None:
+    """Verwijder verlopen bestanden en beperk totale cache tot CACHE_MAX_BYTES."""
+    if not CACHE_DIR.exists():
+        return
+
+    now = time.time()
+    files = []
+    for p in CACHE_DIR.glob("*.json"):
+        try:
+            stat = p.stat()
+            if now - stat.st_mtime > CACHE_TTL_SECONDS:
+                p.unlink(missing_ok=True)
+                logger.info("Cache verlopen: %s verwijderd", p.name)
+            else:
+                files.append((p, stat.st_mtime, stat.st_size))
+        except OSError:
+            continue
+
+    # Cap op totale grootte — verwijder oudste bestanden eerst
+    total = sum(s for _, _, s in files)
+    if total > CACHE_MAX_BYTES:
+        files.sort(key=lambda x: x[1])  # oudste eerst
+        for p, _, size in files:
+            if total <= CACHE_MAX_BYTES:
+                break
+            try:
+                p.unlink(missing_ok=True)
+                total -= size
+                logger.info("Cache over limiet: %s verwijderd", p.name)
+            except OSError:
+                continue
+
+
 def _write_cache(key: str, data: dict) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = CACHE_DIR / f"{key}.json"
     with open(path, "w") as f:
         json.dump(data, f)
+    _cleanup_cache()
 
 
 # --- Overpass query ---
@@ -89,6 +129,8 @@ out skel qt;
 
     from .notify import send_alert
 
+    logger.info("Overpass query voor lat=%.4f lon=%.4f radius=%dm", lat, lon, radius_m)
+
     try:
         resp = requests.post(
             OVERPASS_URL,
@@ -97,17 +139,21 @@ out skel qt;
             timeout=60,
         )
     except requests.Timeout:
+        logger.error("Overpass API timeout (60s)")
         send_alert("Overpass API timeout (60s)")
         raise ConnectionError("Overpass API timeout")
     except requests.ConnectionError:
+        logger.error("Overpass API onbereikbaar")
         send_alert("Overpass API onbereikbaar")
         raise ConnectionError("Overpass API onbereikbaar")
 
     if resp.status_code != 200:
+        logger.error("Overpass API fout: HTTP %d", resp.status_code)
         send_alert(f"Overpass API fout: HTTP {resp.status_code}")
         resp.raise_for_status()
 
     data = resp.json()
+    logger.info("Overpass response: %d elementen", len(data.get("elements", [])))
 
     _write_cache(key, data)
     return data

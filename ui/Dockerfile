@@ -16,11 +16,15 @@ RUN pnpm build
 
 FROM node:22-slim
 
+RUN useradd --create-home appuser
 WORKDIR /app
 
 COPY --from=build /app/build build/
 COPY --from=build /app/package.json .
 COPY --from=build /app/node_modules node_modules/
+
+RUN chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 3000
 

@@ -3,3 +3,4 @@ uvicorn[standard]
 numpy
 requests>=2.31
 networkx>=3.2
+slowapi>=0.1.9

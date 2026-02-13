@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Tuple, Optional, Dict
 
 class RouteRequest(BaseModel):
-    start_address: str = Field(..., example="Grote Markt, Bruges, Belgium")
+    start_address: str = Field(..., max_length=200, example="Grote Markt, Bruges, Belgium")
     distance_km: float = Field(..., gt=5, le=200, example=45.5)
 
 class WindData(BaseModel):

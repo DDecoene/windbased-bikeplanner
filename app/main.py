@@ -1,23 +1,52 @@
-from fastapi import FastAPI, HTTPException
+import logging
+import os
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
 from .models import RouteRequest, RouteResponse
 from . import routing
 from .notify import send_alert
 
+# --- Logging ---
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+
+# --- Rate limiter ---
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="RGWND API",
     description="API for generating wind-optimized cycling loop routes.",
     version="2.0.0",
 )
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Te veel verzoeken. Probeer het over een minuut opnieuw."},
+    )
 
 # --- CORS section ---
-origins = [
+_default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+_env_origins = os.environ.get("CORS_ORIGINS")
+origins = [o.strip() for o in _env_origins.split(",") if o.strip()] if _env_origins else _default_origins
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,11 +58,12 @@ app.add_middleware(
 
 
 @app.post("/generate-route", response_model=RouteResponse)
-async def generate_route(request: RouteRequest, debug: bool = False):
+@limiter.limit("10/minute")
+async def generate_route(request: Request, route_request: RouteRequest, debug: bool = False):
     try:
         route_data = routing.find_wind_optimized_loop(
-            start_address=request.start_address,
-            distance_km=request.distance_km,
+            start_address=route_request.start_address,
+            distance_km=route_request.distance_km,
             debug=debug
         )
         return RouteResponse(**route_data)
@@ -43,9 +73,7 @@ async def generate_route(request: RouteRequest, debug: bool = False):
         send_alert(f"Service onbereikbaar: {e}")
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        import traceback
-        print(f"An unexpected error occurred: {e}")
-        traceback.print_exc()
+        logger.error("Unexpected error in /generate-route: %s", e, exc_info=True)
         send_alert(f"500 error in /generate-route: {e}")
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
 

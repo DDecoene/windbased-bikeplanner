@@ -6,10 +6,13 @@ Silent no-op als de env vars niet geconfigureerd zijn (dev-modus).
 Deduplicatie: identieke berichten worden max 1x per 5 minuten verstuurd.
 """
 
+import logging
 import os
 import time
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -44,4 +47,4 @@ def send_alert(message: str) -> None:
             "parse_mode": "HTML",
         }, timeout=10)
     except Exception:
-        pass  # Telegram zelf is down — we loggen niet recursief
+        logger.warning("Telegram alert versturen mislukt", exc_info=True)
