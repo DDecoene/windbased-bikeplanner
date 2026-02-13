@@ -58,13 +58,13 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 ## Nice-to-Have (Phase 2)
 
-| # | What | Why |
-|---|------|-----|
-| 17 | PWA manifest | Installable on phones, add to home screen |
-| 18 | Netherlands support | Remove `countrycodes=be` restriction, same Overpass approach works |
-| 19 | Wind forecast | Show best day to ride this week using multi-day forecast |
-| 20 | User accounts | Route history, favorites, preferences |
-| 21 | Analytics | Plausible or Umami (privacy-friendly, self-hostable) |
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| 17 | PWA manifest | ✅ Done | manifest.json, custom icons, installable on phones |
+| 18 | Netherlands support | ⏳ Pending | Remove `countrycodes=be` restriction, same Overpass approach works |
+| 19 | Wind forecast | ⏳ Pending | Show best day to ride this week using multi-day forecast |
+| 20 | User accounts | ⏳ Pending | Route history, favorites, preferences |
+| 21 | Analytics | ⏳ Pending | Plausible or Umami (privacy-friendly, self-hostable) |
 
 ## Current Production Gaps
 
@@ -85,7 +85,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - **Caddy reverse proxy** — waiting for domain registration
 - **In-memory caches** — lost on restart, unbounded growth, not thread-safe across workers
 - **Sync internals** — async endpoint but all HTTP calls are synchronous (blocks thread pool)
-- **No PWA manifest** — not installable on mobile
+- ~~No PWA manifest~~ — installable via manifest.json + custom icons
 
 ## Deployment Checklist
 

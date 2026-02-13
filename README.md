@@ -55,6 +55,7 @@ pnpm dev
 - SvelteKit (Svelte 5), Tailwind CSS v4
 - Leaflet for map rendering (CARTO Voyager tiles)
 - GPX export for bike computers
+- PWA — installable on mobile and desktop
 
 **Infrastructure**
 - Docker Compose with non-root containers and resource limits

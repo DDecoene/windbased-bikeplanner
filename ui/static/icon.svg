@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <!-- Wind curves -->
+  <g fill="none" stroke="#06b6d4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top wind line -->
+    <path d="M120 160 h180 q60 0 60-40 q0-40-40-40" stroke-width="28"/>
+    <!-- Middle wind line (longest) -->
+    <path d="M80 256 h240 q70 0 70 40 q0 40-50 40" stroke-width="32"/>
+    <!-- Bottom wind line -->
+    <path d="M140 352 h160 q50 0 50-35 q0-35-35-35" stroke-width="26"/>
+  </g>
+</svg>

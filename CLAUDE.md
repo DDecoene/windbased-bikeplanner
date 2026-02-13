@@ -53,7 +53,7 @@ pnpm lint            # prettier --check
 - `src/routes/privacy/+page.svelte` — Static privacy policy page (no cookies, no analytics, third-party API disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
 - `src/lib/api.ts` — API client with TypeScript types, 120s request timeout. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
-- `src/app.html` — Static OG/Twitter meta tags for social sharing.
+- `src/app.html` — Static OG/Twitter meta tags for social sharing. PWA manifest + theme-color.
 
 **Docker**
 - `Dockerfile` — Python 3.12-slim backend, fixes volume permissions at startup, runs as `appuser`.
