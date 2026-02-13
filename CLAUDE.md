@@ -44,6 +44,7 @@ pnpm lint            # prettier --check
 - `overpass.py` — Overpass API client: fetches RCN route relations + ways + knooppunt nodes, builds a full networkx MultiDiGraph, and a condensed knooppunt-only Graph (early-stop Dijkstra). Disk-cached (1 week TTL, `overpass_cache/`).
 - `weather.py` — Nominatim geocoding (24h TTL cache) and Open-Meteo wind data (10min TTL cache).
 - `models.py` — Pydantic models including JunctionCoord, start_coords, search_radius_km.
+- `notify.py` — Telegram alerting (Bot API). Silent no-op if `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` env vars not set. 5-minute deduplication.
 
 **Frontend (`ui/`)**
 - SvelteKit app (Svelte 5, Tailwind CSS v4, pnpm, adapter-node).
@@ -54,12 +55,15 @@ pnpm lint            # prettier --check
 **Docker**
 - `Dockerfile` — Python 3.12-slim backend.
 - `ui/Dockerfile` — Node 22-slim multi-stage frontend build.
-- `docker-compose.yml` — backend:8000, frontend:3000, named volume for overpass_cache.
+- `docker-compose.yml` — backend:8000, frontend:3000, watchdog, named volume for overpass_cache.
+- `watchdog.sh` — Infrastructure health monitor (checks backend `/health` + frontend every 60s, alerts on status change).
+- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` for ops notifications.
 
 ## Key Details
 
 - Code comments and some variable names are in **Dutch**.
 - Geocoding is restricted to Belgium (`countrycodes=be`).
 - No database — RCN network is fetched on the fly via Overpass API (cached to disk for 1 week).
-- No API keys needed — Open-Meteo and Nominatim are free/unauthenticated.
+- No API keys needed for core functionality — Open-Meteo and Nominatim are free/unauthenticated.
+- Telegram notifications are optional — configured via `.env` (see `.env.example`).
 - Prettier config: tabs, single quotes, no trailing commas, 100 char width.
