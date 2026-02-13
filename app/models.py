@@ -9,6 +9,11 @@ class WindData(BaseModel):
     speed: float = Field(..., description="Wind speed in m/s")
     direction: float = Field(..., description="Wind direction in degrees")
 
+class JunctionCoord(BaseModel):
+    ref: str
+    lat: float
+    lon: float
+
 class TimingData(BaseModel):
     total_duration: float
     geocoding_and_weather: float
@@ -19,15 +24,11 @@ class TimingData(BaseModel):
 class DebugStats(BaseModel):
     graph_nodes: int
     graph_edges: int
-    candidate_spokes: int
-    loop_combinations_checked: int
+    knooppunten: int
+    knooppunt_edges: int
+    candidate_loops: int
     best_loop_score: float
-    # optionele extra’s uit debug:
-    total_paths: Optional[int] = None
-    too_short: Optional[int] = None
-    in_range: Optional[int] = None
-    too_long: Optional[int] = None
-    rcn_nodes: Optional[int] = None
+    approach_dist_m: float
 
 class DebugData(BaseModel):
     timings: TimingData
@@ -38,6 +39,9 @@ class RouteResponse(BaseModel):
     target_distance_km: float
     actual_distance_km: float
     junctions: List[str]
+    junction_coords: List[JunctionCoord] = Field(..., description="Coordinates of each junction on the route")
+    start_coords: Tuple[float, float] = Field(..., description="Geocoded start point (lat, lon)")
+    search_radius_km: float = Field(..., description="Search radius used for the cycling network")
     route_geometry: List[List[Tuple[float, float]]] = Field(..., description="List of coordinate lists for drawing polylines on a map.")
     wind_conditions: WindData
     message: str

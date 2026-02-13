@@ -259,16 +259,29 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
         full_route = loop_full_path
 
     route_geometry = _nodes_to_polyline(G, full_route)
+    # Voeg geocoded startpunt toe aan begin en eind van de geometrie
+    start_point = (coords[0], coords[1])
+    route_geometry[0].insert(0, start_point)
+    route_geometry[0].append(start_point)
     actual_distance_m = _sum_path_attr_multidigraph(G, full_route, "length")
 
-    # Knooppuntnummers op de route
+    # Knooppuntnummers + coördinaten op de route
     junctions = []
+    junction_coords = []
     seen = set()
-    for n in best_loop[:-1]:  # skip laatste (= eerste)
+    for n in best_loop[:-1]:  # skip laatste (= eerste, wordt apart toegevoegd)
         ref = K.nodes[n].get("rcn_ref", "")
         if ref and ref not in seen:
             junctions.append(ref)
+            junction_coords.append({
+                "ref": ref,
+                "lat": K.nodes[n]["y"],
+                "lon": K.nodes[n]["x"],
+            })
             seen.add(ref)
+    # Sluit de lus: voeg startknooppunt toe aan het einde
+    if junctions:
+        junctions.append(junctions[0])
 
     timings['route_finalizing'] = time.perf_counter() - t_step
     timings['total_duration'] = time.perf_counter() - t_start
@@ -279,6 +292,9 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
         "target_distance_km": distance_km,
         "actual_distance_km": round(actual_distance_m / 1000, 2),
         "junctions": junctions or ["Geen knooppunten op deze route"],
+        "junction_coords": junction_coords,
+        "start_coords": (coords[0], coords[1]),
+        "search_radius_km": round(radius_m / 1000, 1),
         "route_geometry": route_geometry,
         "wind_conditions": wind_data,
         "message": "SUCCESS: Een optimale windgebaseerde lus is gevonden."
