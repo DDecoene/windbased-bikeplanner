@@ -5,7 +5,7 @@ from . import routing
 
 
 app = FastAPI(
-    title="Windbased Bikeplanner API",
+    title="RGWND API",
     description="API for generating wind-optimized cycling loop routes.",
     version="2.0.0",
 )
@@ -48,4 +48,4 @@ async def generate_route(request: RouteRequest, debug: bool = False):
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Windbased Bikeplanner API. Go to /docs for documentation."}
+    return {"message": "Welcome to the RGWND API. Go to /docs for documentation."}

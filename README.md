@@ -1,4 +1,4 @@
-# Windbased Bikeplanner
+# RGWND
 
 A wind-optimized cycling loop route planner for Belgium's fietsknooppunten (cycling junction) network. Generates round-trip routes that minimize headwind and maximize tailwind using real-time weather data.
 

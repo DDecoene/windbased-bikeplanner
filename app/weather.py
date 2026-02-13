@@ -33,7 +33,7 @@ def get_coords_from_address(address: str) -> Optional[tuple[float, float]]:
         "limit": 1
     }
     headers = {
-        "User-Agent": "Windbased-Bikeplanner/2.0 (+contact: dev)"
+        "User-Agent": "RGWND/2.0 (+contact: dev)"
     }
     try:
         response = requests.get(url, params=params, headers=headers, timeout=10)

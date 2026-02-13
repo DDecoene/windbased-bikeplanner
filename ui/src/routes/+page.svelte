@@ -234,10 +234,10 @@
 </script>
 
 <svelte:head>
-	<title>Windbased Bike Planner</title>
+	<title>RGWND</title>
 	<meta
 		name="description"
-		content="A smart cycling route planner that optimizes for wind conditions."
+		content="Wind-optimized cycling loops through the Belgian knooppunten network."
 	/>
 </svelte:head>
 
@@ -247,7 +247,7 @@
 		<h1
 			class="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent"
 		>
-			Windbased Bike Planner
+			RGWND
 		</h1>
 		<p class="mt-1 text-sm text-gray-500">Wind-optimized cycling loops through the Belgian knooppunten network</p>
 	</header>

@@ -21,7 +21,7 @@ CACHE_DIR = Path("./overpass_cache")
 CACHE_TTL_SECONDS = 7 * 24 * 3600  # 1 week — netwerk verandert zelden
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-USER_AGENT = "Windbased-Bikeplanner/2.0 (+contact: dev)"
+USER_AGENT = "RGWND/2.0 (+contact: dev)"
 
 
 def _cache_key(lat: float, lon: float, radius_m: int) -> str:
