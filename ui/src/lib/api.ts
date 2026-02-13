@@ -34,13 +34,27 @@ export async function generateRoute(
 	start_address: string,
 	distance_km: number
 ): Promise<RouteResponse> {
-	const response = await fetch(`${API_URL}/generate-route`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({ start_address, distance_km })
-	});
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 120_000);
+
+	let response: Response;
+	try {
+		response = await fetch(`${API_URL}/generate-route`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ start_address, distance_km }),
+			signal: controller.signal
+		});
+	} catch (e: any) {
+		if (e.name === 'AbortError') {
+			throw new Error('The request timed out after 2 minutes. Please try a shorter distance or different address.');
+		}
+		throw e;
+	} finally {
+		clearTimeout(timeout);
+	}
 
 	if (!response.ok) {
 		const errorData = await response.json();

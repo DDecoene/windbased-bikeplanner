@@ -38,21 +38,37 @@ def get_coords_from_address(address: str) -> Optional[tuple[float, float]]:
     headers = {
         "User-Agent": "RGWND/2.0 (+contact: dev)"
     }
-    try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        if data:
-            coords = (float(data[0]["lat"]), float(data[0]["lon"]))
-            _GEOCODE_CACHE[key] = coords
-            _GEOCODE_TTL[key] = _now() + GEOCODE_TTL_SECONDS
-            return coords
-        return None
-    except (requests.RequestException, IndexError, KeyError) as e:
-        logger.error("Nominatim geocoding fout: %s", e)
-        from .notify import send_alert
-        send_alert(f"Nominatim geocoding fout: {e}")
-        return None
+    from .notify import send_alert
+    max_retries = 2
+
+    for attempt in range(max_retries + 1):
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            if response.status_code in (429, 503, 504) and attempt < max_retries:
+                logger.warning("Nominatim HTTP %d, poging %d/%d", response.status_code, attempt + 1, max_retries + 1)
+                time.sleep(2 ** attempt)
+                continue
+            response.raise_for_status()
+            data = response.json()
+            if data:
+                coords = (float(data[0]["lat"]), float(data[0]["lon"]))
+                _GEOCODE_CACHE[key] = coords
+                _GEOCODE_TTL[key] = _now() + GEOCODE_TTL_SECONDS
+                return coords
+            return None
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt < max_retries:
+                logger.warning("Nominatim fout (poging %d/%d): %s", attempt + 1, max_retries + 1, e)
+                time.sleep(2 ** attempt)
+                continue
+            logger.error("Nominatim geocoding fout na %d pogingen: %s", max_retries + 1, e)
+            send_alert(f"Nominatim geocoding fout na {max_retries + 1} pogingen: {e}")
+            return None
+        except (requests.RequestException, IndexError, KeyError) as e:
+            logger.error("Nominatim geocoding fout: %s", e)
+            send_alert(f"Nominatim geocoding fout: {e}")
+            return None
+    return None
 
 def get_wind_data(lat: float, lon: float) -> Optional[dict]:
     """
@@ -71,19 +87,35 @@ def get_wind_data(lat: float, lon: float) -> Optional[dict]:
         "current": "wind_speed_10m,wind_direction_10m",
         "wind_speed_unit": "ms",
     }
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        wind = {
-            "speed": data["current"]["wind_speed_10m"],  # m/s
-            "direction": data["current"]["wind_direction_10m"],  # degrees
-        }
-        _WIND_CACHE[loc] = wind
-        _WIND_TTL[loc] = _now() + WIND_TTL_SECONDS
-        return wind
-    except (requests.RequestException, KeyError) as e:
-        logger.error("Open-Meteo wind API fout: %s", e)
-        from .notify import send_alert
-        send_alert(f"Open-Meteo wind API fout: {e}")
-        return None
+    from .notify import send_alert
+    max_retries = 2
+
+    for attempt in range(max_retries + 1):
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            if response.status_code in (429, 503, 504) and attempt < max_retries:
+                logger.warning("Open-Meteo HTTP %d, poging %d/%d", response.status_code, attempt + 1, max_retries + 1)
+                time.sleep(2 ** attempt)
+                continue
+            response.raise_for_status()
+            data = response.json()
+            wind = {
+                "speed": data["current"]["wind_speed_10m"],  # m/s
+                "direction": data["current"]["wind_direction_10m"],  # degrees
+            }
+            _WIND_CACHE[loc] = wind
+            _WIND_TTL[loc] = _now() + WIND_TTL_SECONDS
+            return wind
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt < max_retries:
+                logger.warning("Open-Meteo fout (poging %d/%d): %s", attempt + 1, max_retries + 1, e)
+                time.sleep(2 ** attempt)
+                continue
+            logger.error("Open-Meteo wind API fout na %d pogingen: %s", max_retries + 1, e)
+            send_alert(f"Open-Meteo wind API fout na {max_retries + 1} pogingen: {e}")
+            return None
+        except (requests.RequestException, KeyError) as e:
+            logger.error("Open-Meteo wind API fout: %s", e)
+            send_alert(f"Open-Meteo wind API fout: {e}")
+            return None
+    return None

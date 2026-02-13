@@ -28,6 +28,47 @@
 	let startMarker: Marker | null = null;
 	let searchCircle: Circle | null = null;
 
+	// --- GPX Export ---
+
+	function downloadGPX(data: RouteResponse): void {
+		const now = new Date().toISOString();
+		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
+		const windDir = degreesToCardinal(data.wind_conditions.direction);
+
+		let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="RGWND" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>${escapeXml(data.start_address)} — ${data.actual_distance_km} km</name>
+    <desc>Wind: ${windKmh} km/h ${windDir}. Junctions: ${data.junctions.join(' → ')}</desc>
+    <time>${now}</time>
+  </metadata>
+`;
+
+		for (const jc of data.junction_coords) {
+			gpx += `  <wpt lat="${jc.lat}" lon="${jc.lon}"><name>Knooppunt ${escapeXml(jc.ref)}</name></wpt>\n`;
+		}
+
+		gpx += `  <trk>\n    <name>${escapeXml(data.start_address)}</name>\n    <trkseg>\n`;
+		for (const segment of data.route_geometry) {
+			for (const [lat, lon] of segment) {
+				gpx += `      <trkpt lat="${lat}" lon="${lon}"></trkpt>\n`;
+			}
+		}
+		gpx += `    </trkseg>\n  </trk>\n</gpx>`;
+
+		const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `rgwnd-${data.actual_distance_km}km.gpx`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function escapeXml(s: string): string {
+		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	}
+
 	// --- Helpers ---
 
 	const CARDINAL_DIRS = [
@@ -241,7 +282,7 @@
 	/>
 </svelte:head>
 
-<main class="mx-auto flex h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
+<main class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
 	<!-- Header -->
 	<header class="shrink-0 text-center">
 		<h1
@@ -309,7 +350,7 @@
 
 	<!-- Results + Map -->
 	<div
-		class="flex min-h-0 flex-grow flex-col gap-3 overflow-auto rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-lg backdrop-blur-sm"
+		class="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-lg backdrop-blur-sm"
 	>
 		{#if errorMessage}
 			<div class="rounded-lg border border-red-900/50 bg-red-950/40 p-4">
@@ -409,12 +450,24 @@
 					{routeData.junctions.join(' \u2192 ')}
 				</p>
 			</div>
+
+			<!-- GPX Download -->
+			<button
+				type="button"
+				on:click={() => downloadGPX(routeData!)}
+				class="shrink-0 flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+				</svg>
+				Download GPX
+			</button>
 		{/if}
 
 		<!-- Map -->
 		<div
 			bind:this={mapContainer}
-			class="min-h-[300px] w-full flex-1 overflow-hidden rounded-lg ring-1 ring-gray-800"
+			class="aspect-square w-full overflow-hidden rounded-lg ring-1 ring-gray-800"
 		/>
 	</div>
 </main>

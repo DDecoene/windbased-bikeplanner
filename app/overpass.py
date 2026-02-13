@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path("./overpass_cache")
 CACHE_TTL_SECONDS = 7 * 24 * 3600  # 1 week — netwerk verandert zelden
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URL = os.environ.get("OVERPASS_URL", "https://overpass.kumi.systems/api/interpreter")
 USER_AGENT = "RGWND/2.0 (+contact: dev)"
 
 
@@ -131,26 +131,36 @@ out skel qt;
 
     logger.info("Overpass query voor lat=%.4f lon=%.4f radius=%dm", lat, lon, radius_m)
 
-    try:
-        resp = requests.post(
-            OVERPASS_URL,
-            data={"data": query},
-            headers={"User-Agent": USER_AGENT},
-            timeout=60,
-        )
-    except requests.Timeout:
-        logger.error("Overpass API timeout (60s)")
-        send_alert("Overpass API timeout (60s)")
-        raise ConnectionError("Overpass API timeout")
-    except requests.ConnectionError:
-        logger.error("Overpass API onbereikbaar")
-        send_alert("Overpass API onbereikbaar")
-        raise ConnectionError("Overpass API onbereikbaar")
+    max_retries = 2
+    last_error = None
 
-    if resp.status_code != 200:
-        logger.error("Overpass API fout: HTTP %d", resp.status_code)
-        send_alert(f"Overpass API fout: HTTP {resp.status_code}")
-        resp.raise_for_status()
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(
+                OVERPASS_URL,
+                data={"data": query},
+                headers={"User-Agent": USER_AGENT},
+                timeout=60,
+            )
+            if resp.status_code in (429, 503, 504) and attempt < max_retries:
+                logger.warning("Overpass API HTTP %d, poging %d/%d", resp.status_code, attempt + 1, max_retries + 1)
+                time.sleep(2 ** attempt)
+                continue
+            if resp.status_code != 200:
+                logger.error("Overpass API fout: HTTP %d", resp.status_code)
+                send_alert(f"Overpass API fout: HTTP {resp.status_code}")
+                resp.raise_for_status()
+            break
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last_error = e
+            if attempt < max_retries:
+                logger.warning("Overpass API fout (poging %d/%d): %s", attempt + 1, max_retries + 1, e)
+                time.sleep(2 ** attempt)
+                continue
+            error_msg = "Overpass API timeout" if isinstance(e, requests.Timeout) else "Overpass API onbereikbaar"
+            logger.error("%s na %d pogingen", error_msg, max_retries + 1)
+            send_alert(f"{error_msg} na {max_retries + 1} pogingen")
+            raise ConnectionError(error_msg) from e
 
     data = resp.json()
     logger.info("Overpass response: %d elementen", len(data.get("elements", [])))
