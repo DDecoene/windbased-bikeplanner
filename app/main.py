@@ -1,28 +1,16 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # Import this
+from fastapi.middleware.cors import CORSMiddleware
 from .models import RouteRequest, RouteResponse
 from . import routing
-from .core.cache import configure_osmnx_caching
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup event
-    configure_osmnx_caching()
-    yield
-    # Shutdown event (optional, not needed for this task)
 
 
 app = FastAPI(
     title="Windbased Bikeplanner API",
     description="API for generating wind-optimized cycling loop routes.",
     version="2.0.0",
-    lifespan=lifespan,
 )
 
-# --- Add this CORS section ---
-# This allows your Svelte app (running on localhost:5173) to communicate with the API
+# --- CORS section ---
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -35,7 +23,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# --- End of CORS section ---
 
 
 @app.post("/generate-route", response_model=RouteResponse)

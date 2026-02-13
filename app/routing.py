@@ -1,11 +1,10 @@
-import osmnx as ox
 import networkx as nx
 import numpy as np
 import itertools
 import time
 from . import weather
+from . import overpass
 from typing import List
-# from haversine import haversine, Unit  # niet gebruikt
 
 # --- Wind Effort Calculation ---
 def calculate_effort_cost(length: float, bearing: float, wind_speed: float, wind_direction: float) -> float:
@@ -87,7 +86,6 @@ def _debug_candidate_spokes(all_paths: dict, start_node, target_dist_m: float, G
         else:
             in_range += 1
 
-    # vermijd zware checks zoals is_connected tenzij je echt wil
     rcn_nodes = [n for n, data in G.nodes(data=True) if 'rcn_ref' in data]
 
     return {
@@ -96,7 +94,6 @@ def _debug_candidate_spokes(all_paths: dict, start_node, target_dist_m: float, G
         'in_range': in_range,
         'too_long': too_long,
         'rcn_nodes': len(rcn_nodes),
-        # path_lengths weglaten (kan gigantisch zijn) om response slank te houden
     }
 
 def find_wind_optimized_loop(start_address: str, distance_km: float, tolerance: float = 0.2, debug: bool = False) -> dict:
@@ -114,42 +111,28 @@ def find_wind_optimized_loop(start_address: str, distance_km: float, tolerance: 
     timings['geocoding_and_weather'] = time.perf_counter() - t_start
     t_step = time.perf_counter()
 
-    # --- Step 2: Graph Download & Prep ---
-    # Heuristiek: radius ~ D/2.5 met onder- en bovengrens
+    # --- Step 2: Graph Download & Prep (Overpass RCN network) ---
     target_dist_m = distance_km * 1000.0
-    radius_m = int(min(max(target_dist_m / 2.5, 2000), 12000))
+    # Radius iets groter dan halve afstand, zodat we genoeg netwerk hebben
+    radius_m = int(min(max(target_dist_m / 2.0, 3000), 15000))
 
-    # Gebruik OSMnx bike network voor stabiliteit en snelheid
-    G = ox.graph_from_point(
-        coords,
-        dist=radius_m,
-        network_type="bike",
-        simplify=True,
-        retain_all=False,
-        truncate_by_edge=True,
-    )
+    overpass_data = overpass.fetch_rcn_network(coords[0], coords[1], radius_m)
+    G = overpass.build_graph(overpass_data)
 
     if G.number_of_nodes() == 0:
-        raise ValueError("Could not download any cycling network. Try a different address or check internet connection.")
+        raise ValueError("Geen fietsknooppuntennetwerk gevonden in de buurt. Probeer een ander adres.")
 
-    # Bereken bearings voor effort
-    G = ox.add_edge_bearings(G)
     G_effort = add_wind_effort_weight(G, wind_data['speed'], wind_data['direction'])
 
-    # vind start node
-    start_node = ox.nearest_nodes(G, X=coords[1], Y=coords[0])
-    if start_node is None:
-        raise ValueError("Could not find a suitable starting node in the cycling network graph.")
+    # Vind startnode (dichtstbijzijnde node in de graph)
+    start_node = overpass.nearest_node(G, coords[0], coords[1])
 
     timings['graph_download_and_prep'] = time.perf_counter() - t_step
     t_step = time.perf_counter()
 
     # --- Step 3: Loop Finding Algorithm ---
     # Beperk zoekruimte met cutoff op lengte (0.75 * target)
-    # We halen paths op die op 'length' redelijk binnen bereik liggen; effort berekenen we apart.
     cutoff_len = target_dist_m * 0.75
-    # distances, paths = nx.single_source_dijkstra(G, start_node, cutoff=cutoff_len, weight='length')
-    # Voor performance willen we alleen 'paths':
     all_paths = nx.single_source_dijkstra_path(G, start_node, cutoff=cutoff_len, weight='length')
 
     # Debug info enkel bij debug=True
@@ -266,7 +249,6 @@ def find_wind_optimized_loop(start_address: str, distance_km: float, tolerance: 
         stats['graph_edges'] = G.number_of_edges()
         stats['candidate_spokes'] = len(candidate_spokes)
         stats['best_loop_score'] = float(best_loop_score if best_loop_score != float('inf') else -1)
-        # voeg beperkte debug info toe die overeenkomt met Pydantic model
         stats.update({k: v for k, v in debug_info.items() if k in ('total_paths', 'too_short', 'in_range', 'too_long', 'rcn_nodes')})
 
         response['debug_data'] = {
