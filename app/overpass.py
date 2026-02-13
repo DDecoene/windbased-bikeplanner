@@ -221,7 +221,12 @@ def build_knooppunt_graph(G_full: nx.MultiDiGraph) -> nx.Graph:
     Bouw een vereenvoudigde graph met enkel knooppunten als nodes.
     Edges verbinden direct-naburige knooppunten (geen tussenliggend knooppunt
     op het kortste pad) met de werkelijke afstand en het volledige pad.
+
+    Gebruikt een geoptimaliseerde Dijkstra die stopt zodra een naburig
+    knooppunt bereikt wordt, zodat we niet het hele netwerk doorzoeken.
     """
+    import heapq
+
     kp_nodes = [n for n, d in G_full.nodes(data=True) if "rcn_ref" in d]
     kp_set = set(kp_nodes)
 
@@ -230,20 +235,32 @@ def build_knooppunt_graph(G_full: nx.MultiDiGraph) -> nx.Graph:
         nd = G_full.nodes[n]
         K.add_node(n, y=nd["y"], x=nd["x"], rcn_ref=nd["rcn_ref"])
 
-    # Per knooppunt: Dijkstra om buren te vinden
+    # Per knooppunt: korte Dijkstra die stopt bij naburige knooppunten
     for src in kp_nodes:
-        distances, paths = nx.single_source_dijkstra(
-            G_full, src, cutoff=15000, weight="length"
-        )
-        for dst in kp_nodes:
-            if dst <= src or dst not in distances:
+        # Min-heap: (afstand, node, pad)
+        heap = [(0.0, src, [src])]
+        visited = set()
+
+        while heap:
+            dist, node, path = heapq.heappop(heap)
+
+            if node in visited:
                 continue
-            if K.has_edge(src, dst):
-                continue
-            path = paths[dst]
-            # Directe verbinding: geen ander knooppunt op het pad
-            if any(n in kp_set for n in path[1:-1]):
-                continue
-            K.add_edge(src, dst, length=distances[dst], full_path=path)
+            visited.add(node)
+
+            # Naburig knooppunt gevonden (niet de bron zelf)
+            if node != src and node in kp_set:
+                if not K.has_edge(src, node):
+                    K.add_edge(src, node, length=dist, full_path=path)
+                continue  # Niet verder zoeken voorbij dit knooppunt
+
+            # Buren verkennen
+            for _, neighbor, key, edge_data in G_full.edges(node, data=True, keys=True):
+                if neighbor in visited:
+                    continue
+                new_dist = dist + edge_data.get("length", 0.0)
+                if new_dist > 15000:
+                    continue
+                heapq.heappush(heap, (new_dist, neighbor, path + [neighbor]))
 
     return K
