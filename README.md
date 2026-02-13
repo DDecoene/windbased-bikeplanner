@@ -10,6 +10,7 @@ A wind-optimized cycling loop route planner for Belgium's fietsknooppunten (cycl
 4. **Build** a condensed knooppunt graph with wind-weighted edges
 5. **Find** the best loop via DFS with distance-budget pruning and wind-effort scoring
 6. **Return** the route as a polyline with junction waypoints
+7. **Export** as GPX for bike computers (Garmin, Wahoo, etc.)
 
 No API keys required — all services used are free and unauthenticated.
 
@@ -53,11 +54,13 @@ pnpm dev
 **Frontend**
 - SvelteKit (Svelte 5), Tailwind CSS v4
 - Leaflet for map rendering (CARTO Voyager tiles)
+- GPX export for bike computers
 
 **Infrastructure**
 - Docker Compose with non-root containers and resource limits
 - Watchdog health monitor with Telegram alerting
 - Overpass disk cache with auto-cleanup (1 week TTL, 500MB cap)
+- Retry with exponential backoff on all external API calls
 
 ## Configuration
 
@@ -67,6 +70,7 @@ pnpm dev
 | `VITE_API_URL` | Backend URL for frontend | `/api` |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for alerts | _(disabled)_ |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for alerts | _(disabled)_ |
+| `OVERPASS_URL` | Overpass API endpoint | `https://overpass.kumi.systems/api/interpreter` |
 
 ## Project Structure
 
@@ -74,8 +78,8 @@ pnpm dev
 app/
   main.py        — FastAPI app, CORS, rate limiting, structured logging
   routing.py     — Wind-weighted loop finding on condensed knooppunt graph
-  overpass.py    — Overpass API client, networkx graph builder, disk cache
-  weather.py     — Nominatim geocoding + Open-Meteo wind data
+  overpass.py    — Overpass API client, networkx graph builder, disk cache, retry logic
+  weather.py     — Nominatim geocoding + Open-Meteo wind data, retry logic
   models.py      — Pydantic request/response models
   notify.py      — Telegram ops alerts (optional)
 ui/

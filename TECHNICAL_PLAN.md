@@ -41,12 +41,12 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 ## Should-Have (First Week After Launch)
 
-| # | What | Why |
-|---|------|-----|
-| 10 | GPX export | Cyclists need this for bike computers (Garmin, Wahoo) — biggest feature gap |
-| 11 | OG meta tags | Social sharing (og:title, og:description, og:image with route preview) |
-| 12 | Error retry | Overpass sometimes times out — retry once before failing |
-| 13 | Request timeout | Frontend shows spinner forever if backend hangs |
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| 10 | GPX export | ✅ Done | Frontend-only, builds GPX with waypoints + track, download button |
+| 11 | OG meta tags | ✅ Done | Static og:title, og:description, twitter:card in app.html |
+| 12 | Error retry | ✅ Done | 2 retries with exponential backoff on timeout/connection/429/503/504 |
+| 13 | Request timeout | ✅ Done | 120s AbortController on frontend fetch, user-friendly error message |
 
 ## Nice-to-Have (Phase 2)
 
@@ -78,7 +78,6 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - **In-memory caches** — lost on restart, unbounded growth, not thread-safe across workers
 - **Sync internals** — async endpoint but all HTTP calls are synchronous (blocks thread pool)
 - **No PWA manifest** — not installable on mobile
-- **No OG/social meta tags** — poor social media shareability
 
 ## Deployment Checklist
 
@@ -99,5 +98,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [ ] Point DNS to Hetzner VPS
 - [ ] Verify SSL works
 - [ ] Test full flow on production domain
-- [ ] Add GPX export feature
-- [ ] Add OG meta tags for social sharing
+- [x] Add GPX export feature
+- [x] Add OG meta tags for social sharing
+- [x] Add error retry with exponential backoff
+- [x] Add frontend request timeout (120s)
