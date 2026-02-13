@@ -53,7 +53,7 @@ pnpm lint            # prettier --check
 - `src/routes/privacy/+page.svelte` — Static privacy policy page (no cookies, no analytics, third-party API disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
 - `src/lib/api.ts` — API client with TypeScript types, 120s request timeout. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
-- `src/app.html` — Static OG/Twitter meta tags for social sharing. PWA manifest + theme-color.
+- `src/app.html` — Static OG/Twitter meta tags (Dutch, `og:locale=nl_BE`). PWA manifest + theme-color.
 
 **Docker**
 - `Dockerfile` — Python 3.12-slim backend, fixes volume permissions at startup, runs as `appuser`.
@@ -64,6 +64,7 @@ pnpm lint            # prettier --check
 
 ## Key Details
 
+- All user-facing frontend text is in **Dutch** (no i18n framework — direct strings).
 - Code comments and some variable names are in **Dutch**.
 - Geocoding is restricted to Belgium (`countrycodes=be`).
 - No database — RCN network is fetched on the fly via Overpass API (cached to disk for 1 week).

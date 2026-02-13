@@ -1,6 +1,6 @@
 # RGWND
 
-A wind-optimized cycling loop route planner for Belgium's fietsknooppunten (cycling junction) network. Generates round-trip routes that minimize headwind and maximize tailwind using real-time weather data.
+Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwerk. Genereert lusroutes die tegenwind minimaliseren en rugwind maximaliseren op basis van real-time weergegevens.
 
 ## How It Works
 
@@ -55,6 +55,7 @@ pnpm dev
 - SvelteKit (Svelte 5), Tailwind CSS v4
 - Leaflet for map rendering (CARTO Voyager tiles)
 - GPX export for bike computers
+- Dutch UI (no i18n framework, direct strings)
 - PWA — installable on mobile and desktop
 
 **Infrastructure**

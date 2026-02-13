@@ -39,7 +39,7 @@
 <gpx version="1.1" creator="RGWND" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(data.start_address)} — ${data.actual_distance_km} km</name>
-    <desc>Wind: ${windKmh} km/h ${windDir}. Junctions: ${data.junctions.join(' → ')}</desc>
+    <desc>Wind: ${windKmh} km/h ${windDir}. Knooppunten: ${data.junctions.join(' → ')}</desc>
     <time>${now}</time>
   </metadata>
 `;
@@ -92,9 +92,9 @@
 	// --- Loading messages ---
 
 	const LOADING_MESSAGES = [
-		'Analyzing wind conditions...',
-		'Downloading cycling network...',
-		'Calculating optimal route...'
+		'Windcondities analyseren...',
+		'Fietsnetwerk downloaden...',
+		'Optimale route berekenen...'
 	];
 
 	function startLoadingMessages() {
@@ -278,7 +278,7 @@
 	<title>RGWND</title>
 	<meta
 		name="description"
-		content="Wind-optimized cycling loops through the Belgian knooppunten network."
+		content="Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
 	/>
 </svelte:head>
 
@@ -290,7 +290,7 @@
 		>
 			RGWND
 		</h1>
-		<p class="mt-1 text-sm text-gray-500">Wind-optimized cycling loops through the Belgian knooppunten network</p>
+		<p class="mt-1 text-sm text-gray-500">Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk</p>
 	</header>
 
 	<!-- Form -->
@@ -300,20 +300,20 @@
 	>
 		<div class="mb-4">
 			<label for="address" class="mb-1.5 block text-sm font-medium text-gray-400"
-				>Start Address</label
+				>Startadres</label
 			>
 			<input
 				type="text"
 				id="address"
 				bind:value={startAddress}
 				class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-				placeholder="e.g., Grote Markt, Bruges, Belgium"
+				placeholder="bv. Grote Markt, Brugge"
 				required
 			/>
 		</div>
 		<div class="mb-5">
 			<label for="distance" class="mb-1.5 block text-sm font-medium text-gray-400">
-				Distance: <span class="font-semibold text-cyan-400">{distanceKm} km</span>
+				Afstand: <span class="font-semibold text-cyan-400">{distanceKm} km</span>
 			</label>
 			<div class="flex items-center gap-3">
 				<input
@@ -343,7 +343,7 @@
 			{#if isLoading}
 				<span class="animate-pulse">{loadingMessage}</span>
 			{:else}
-				Generate Route
+				Genereer Route
 			{/if}
 		</button>
 	</form>
@@ -356,9 +356,9 @@
 			<div class="rounded-lg border border-red-900/50 bg-red-950/40 p-4">
 				<p class="mb-2 text-sm font-semibold text-red-400">{errorMessage}</p>
 				<ul class="list-inside list-disc space-y-0.5 text-xs text-red-400/70">
-					<li>Try adjusting the desired distance (shorter or longer)</li>
-					<li>Try a different starting address</li>
-					<li>The area might not have enough connected cycling junctions</li>
+					<li>Probeer de gewenste afstand aan te passen (korter of langer)</li>
+					<li>Probeer een ander startadres</li>
+					<li>Het gebied heeft mogelijk niet genoeg verbonden fietsknooppunten</li>
 				</ul>
 			</div>
 		{/if}
@@ -370,7 +370,7 @@
 					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
 				>
 					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Distance
+						Afstand
 					</p>
 					<p class="text-xl font-bold text-cyan-400">
 						{routeData.actual_distance_km}
@@ -381,7 +381,7 @@
 					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
 				>
 					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Junctions
+						Knooppunten
 					</p>
 					<p class="text-xl font-bold text-cyan-400">{routeData.junction_coords.length}</p>
 				</div>
@@ -389,7 +389,7 @@
 					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
 				>
 					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Network
+						Netwerk
 					</p>
 					<p class="text-xl font-bold text-cyan-400">
 						{routeData.search_radius_km}
@@ -404,7 +404,7 @@
 			>
 				<div class="text-center">
 					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Wind Speed
+						Windsnelheid
 					</p>
 					<p class="text-sm font-semibold text-gray-200">
 						{windSpeedKmh(routeData.wind_conditions.speed)}
@@ -415,7 +415,7 @@
 				<div class="flex items-center gap-2">
 					<div class="text-center">
 						<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-							Direction
+							Richting
 						</p>
 						<p class="text-sm font-semibold text-gray-200">
 							{degreesToCardinal(routeData.wind_conditions.direction)}
@@ -473,7 +473,7 @@
 </main>
 
 <footer class="mx-auto w-full max-w-5xl px-4 pb-6 pt-2 text-center text-xs text-gray-600">
-	<a href="/privacy" class="hover:text-gray-400 transition">Privacy Policy</a>
+	<a href="/privacy" class="hover:text-gray-400 transition">Privacybeleid</a>
 	<span class="mx-2">·</span>
 	<a href="/contact" class="hover:text-gray-400 transition">Contact</a>
 </footer>

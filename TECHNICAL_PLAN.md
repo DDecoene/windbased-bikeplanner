@@ -56,15 +56,21 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 | 15 | Contact page | ✅ Done | `/contact` — email + FAQ accordion (Svelte 5 `$state`), dark theme |
 | 16 | Footer links | ✅ Done | Privacy + Contact links in main page footer |
 
+## Should-Have (Continued 2)
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| 17 | Dutch translation | ✅ Done | All frontend text translated to Dutch (no i18n framework, direct string replacement) |
+
 ## Nice-to-Have (Phase 2)
 
 | # | What | Status | Notes |
 |---|------|--------|-------|
-| 17 | PWA manifest | ✅ Done | manifest.json, custom icons, installable on phones |
-| 18 | Netherlands support | ⏳ Pending | Remove `countrycodes=be` restriction, same Overpass approach works |
-| 19 | Wind forecast | ⏳ Pending | Show best day to ride this week using multi-day forecast |
-| 20 | User accounts | ⏳ Pending | Route history, favorites, preferences |
-| 21 | Analytics | ⏳ Pending | Plausible or Umami (privacy-friendly, self-hostable) |
+| 18 | PWA manifest | ✅ Done | manifest.json, custom icons, installable on phones |
+| 19 | Netherlands support | ⏳ Pending | Remove `countrycodes=be` restriction, same Overpass approach works |
+| 20 | Wind forecast | ⏳ Pending | Show best day to ride this week using multi-day forecast |
+| 21 | User accounts | ⏳ Pending | Route history, favorites, preferences |
+| 22 | Analytics | ⏳ Pending | Plausible or Umami (privacy-friendly, self-hostable) |
 
 ## Current Production Gaps
 
@@ -113,3 +119,4 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Add privacy policy page (`/privacy`)
 - [x] Add contact page with FAQ accordion (`/contact`)
 - [x] Add footer with Privacy + Contact links
+- [x] Translate all frontend text to Dutch

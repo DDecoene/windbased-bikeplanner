@@ -1,42 +1,42 @@
 <svelte:head>
-	<title>Privacy Policy — RGWND</title>
+	<title>Privacybeleid — RGWND</title>
 </svelte:head>
 
 <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 p-6 font-sans antialiased">
-	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400">&larr; Back to RGWND</a>
+	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400">&larr; Terug naar RGWND</a>
 
-	<h1 class="text-2xl font-bold text-gray-100">Privacy Policy</h1>
+	<h1 class="text-2xl font-bold text-gray-100">Privacybeleid</h1>
 
 	<div class="space-y-5 text-sm leading-relaxed text-gray-400">
 		<section>
-			<h2 class="mb-1 text-base font-semibold text-gray-200">No Accounts, No Database</h2>
-			<p>RGWND does not require an account, login, or registration. We do not store any personal data in a database. There are no cookies and no analytics tracking.</p>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Geen accounts, geen database</h2>
+			<p>RGWND vereist geen account, login of registratie. We slaan geen persoonlijke gegevens op in een database. Er zijn geen cookies en geen analytics-tracking.</p>
 		</section>
 
 		<section>
-			<h2 class="mb-1 text-base font-semibold text-gray-200">Third-Party Services</h2>
-			<p>To generate routes, RGWND communicates with the following free, public APIs:</p>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Externe diensten</h2>
+			<p>Om routes te genereren communiceert RGWND met de volgende gratis, publieke API's:</p>
 			<ul class="mt-2 list-inside list-disc space-y-1 text-gray-500">
-				<li><strong class="text-gray-400">Nominatim</strong> (OpenStreetMap) — geocodes your start address into coordinates</li>
-				<li><strong class="text-gray-400">Open-Meteo</strong> — provides real-time wind speed and direction</li>
-				<li><strong class="text-gray-400">Overpass API</strong> — fetches cycling junction network data from OpenStreetMap</li>
+				<li><strong class="text-gray-400">Nominatim</strong> (OpenStreetMap) — geocodeert je startadres naar coördinaten</li>
+				<li><strong class="text-gray-400">Open-Meteo</strong> — levert real-time windsnelheid en -richting</li>
+				<li><strong class="text-gray-400">Overpass API</strong> — haalt fietsknooppuntendata op uit OpenStreetMap</li>
 			</ul>
-			<p class="mt-2">These services have their own privacy policies. RGWND sends only the data necessary to fulfill your route request (address or coordinates).</p>
+			<p class="mt-2">Deze diensten hebben hun eigen privacybeleid. RGWND stuurt enkel de gegevens die nodig zijn om je routeverzoek te verwerken (adres of coördinaten).</p>
 		</section>
 
 		<section>
-			<h2 class="mb-1 text-base font-semibold text-gray-200">Rate Limiting</h2>
-			<p>Your IP address is used solely for rate limiting (max 10 requests per minute). This information is held in memory only and is not persisted to disk or any external service.</p>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Snelheidsbeperking</h2>
+			<p>Je IP-adres wordt uitsluitend gebruikt voor snelheidsbeperking (max. 10 verzoeken per minuut). Deze informatie wordt alleen in het geheugen bewaard en niet opgeslagen op schijf of bij een externe dienst.</p>
 		</section>
 
 		<section>
-			<h2 class="mb-1 text-base font-semibold text-gray-200">No Data Sold or Shared</h2>
-			<p>We do not sell, share, or transfer any user data to third parties beyond the API calls described above.</p>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Geen gegevens verkocht of gedeeld</h2>
+			<p>Wij verkopen, delen of dragen geen gebruikersgegevens over aan derden, buiten de hierboven beschreven API-aanroepen.</p>
 		</section>
 
 		<section>
 			<h2 class="mb-1 text-base font-semibold text-gray-200">Contact</h2>
-			<p>Questions about this policy? Reach us at <a href="mailto:info@rgwnd.app" class="text-cyan-400 hover:underline">info@rgwnd.app</a>.</p>
+			<p>Vragen over dit beleid? Neem contact op via <a href="mailto:info@rgwnd.app" class="text-cyan-400 hover:underline">info@rgwnd.app</a>.</p>
 		</section>
 	</div>
 </main>

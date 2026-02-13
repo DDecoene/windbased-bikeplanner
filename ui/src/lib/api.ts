@@ -49,7 +49,7 @@ export async function generateRoute(
 		});
 	} catch (e: any) {
 		if (e.name === 'AbortError') {
-			throw new Error('The request timed out after 2 minutes. Please try a shorter distance or different address.');
+			throw new Error('Het verzoek is verlopen na 2 minuten. Probeer een kortere afstand of een ander adres.');
 		}
 		throw e;
 	} finally {
@@ -58,7 +58,7 @@ export async function generateRoute(
 
 	if (!response.ok) {
 		const errorData = await response.json();
-		throw new Error(errorData.detail || 'An unknown error occurred on the server.');
+		throw new Error(errorData.detail || 'Er is een onbekende fout opgetreden op de server.');
 	}
 
 	return response.json() as Promise<RouteResponse>;
