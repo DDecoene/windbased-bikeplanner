@@ -87,13 +87,26 @@ node(around:{radius_m},{lat},{lon})["rcn_ref"]->.knooppunten;
 out skel qt;
 """
 
-    resp = requests.post(
-        OVERPASS_URL,
-        data={"data": query},
-        headers={"User-Agent": USER_AGENT},
-        timeout=60,
-    )
-    resp.raise_for_status()
+    from .notify import send_alert
+
+    try:
+        resp = requests.post(
+            OVERPASS_URL,
+            data={"data": query},
+            headers={"User-Agent": USER_AGENT},
+            timeout=60,
+        )
+    except requests.Timeout:
+        send_alert("Overpass API timeout (60s)")
+        raise ConnectionError("Overpass API timeout")
+    except requests.ConnectionError:
+        send_alert("Overpass API onbereikbaar")
+        raise ConnectionError("Overpass API onbereikbaar")
+
+    if resp.status_code != 200:
+        send_alert(f"Overpass API fout: HTTP {resp.status_code}")
+        resp.raise_for_status()
+
     data = resp.json()
 
     _write_cache(key, data)

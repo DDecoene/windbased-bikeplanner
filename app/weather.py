@@ -45,7 +45,9 @@ def get_coords_from_address(address: str) -> Optional[tuple[float, float]]:
             _GEOCODE_TTL[key] = _now() + GEOCODE_TTL_SECONDS
             return coords
         return None
-    except (requests.RequestException, IndexError, KeyError):
+    except (requests.RequestException, IndexError, KeyError) as e:
+        from .notify import send_alert
+        send_alert(f"Nominatim geocoding fout: {e}")
         return None
 
 def get_wind_data(lat: float, lon: float) -> Optional[dict]:
@@ -76,5 +78,7 @@ def get_wind_data(lat: float, lon: float) -> Optional[dict]:
         _WIND_CACHE[loc] = wind
         _WIND_TTL[loc] = _now() + WIND_TTL_SECONDS
         return wind
-    except (requests.RequestException, KeyError):
+    except (requests.RequestException, KeyError) as e:
+        from .notify import send_alert
+        send_alert(f"Open-Meteo wind API fout: {e}")
         return None

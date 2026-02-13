@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .models import RouteRequest, RouteResponse
 from . import routing
+from .notify import send_alert
 
 
 app = FastAPI(
@@ -39,12 +40,18 @@ async def generate_route(request: RouteRequest, debug: bool = False):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ConnectionError as e:
+        send_alert(f"Service onbereikbaar: {e}")
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         import traceback
         print(f"An unexpected error occurred: {e}")
         traceback.print_exc()
+        send_alert(f"500 error in /generate-route: {e}")
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.get("/")
 def read_root():

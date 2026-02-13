@@ -5,6 +5,9 @@ services:
       - "8000:8000"
     volumes:
       - overpass_cache:/app/overpass_cache
+    env_file:
+      - .env
+    restart: unless-stopped
 
   frontend:
     build: ./ui
@@ -12,6 +15,19 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+    restart: unless-stopped
+
+  watchdog:
+    image: alpine/curl:8.11.1
+    entrypoint: ["/bin/sh", "/watchdog.sh"]
+    volumes:
+      - ./watchdog.sh:/watchdog.sh:ro
+    env_file:
+      - .env
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
 
 volumes:
   overpass_cache:
