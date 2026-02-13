@@ -71,18 +71,20 @@ def fetch_rcn_network(lat: float, lon: float, radius_m: int) -> dict:
         return cached
 
     query = f"""
-[out:json][timeout:60];
-// Stap 1: ways in de buurt
-way(around:{radius_m},{lat},{lon});
-// Stap 2: RCN-relaties die deze ways bevatten
-rel(bw)["network"="rcn"]["route"="bicycle"];
-// Stap 3: alle ways uit die relaties
-way(r);
-// Stap 4: resolve nodes + knooppunt-nodes in de buurt
-(._;>;);
-node(around:{radius_m},{lat},{lon})["rcn_ref"];
-(._;>;);
-out body;
+[out:json][timeout:120];
+// Stap 1: RCN route-relaties in de buurt
+rel(around:{radius_m},{lat},{lon})["network"="rcn"]["type"="route"]->.rels;
+// Stap 2: alle ways uit die relaties
+way(r.rels)->.ways;
+// Stap 3: knooppunt-nodes in de buurt
+node(around:{radius_m},{lat},{lon})["rcn_ref"]->.knooppunten;
+// Stap 4: output knooppunten met tags
+.knooppunten out body;
+// Stap 5: output ways met body
+.ways out body;
+// Stap 6: resolve en output way-nodes (coords)
+.ways > ;
+out skel qt;
 """
 
     resp = requests.post(
@@ -134,7 +136,17 @@ def build_graph(overpass_data: dict) -> nx.MultiDiGraph:
 
     for el in elements:
         if el["type"] == "node":
-            nodes[el["id"]] = el
+            nid = el["id"]
+            if nid in nodes:
+                # Bewaar tags van eerdere versie (out body vóór out skel)
+                existing_tags = nodes[nid].get("tags", {})
+                new_tags = el.get("tags", {})
+                merged = {**new_tags, **existing_tags}
+                nodes[nid] = el
+                if merged:
+                    nodes[nid]["tags"] = merged
+            else:
+                nodes[nid] = el
         elif el["type"] == "way":
             ways.append(el)
 
@@ -186,3 +198,52 @@ def nearest_node(G: nx.MultiDiGraph, lat: float, lon: float) -> int:
     if best_node is None:
         raise ValueError("Graph bevat geen nodes.")
     return best_node
+
+
+def nearest_knooppunt(G: nx.MultiDiGraph, lat: float, lon: float) -> int:
+    """Vind het dichtstbijzijnde knooppunt (node met rcn_ref) in de graph."""
+    best_node = None
+    best_dist = float("inf")
+    for nid, data in G.nodes(data=True):
+        if "rcn_ref" not in data:
+            continue
+        d = _haversine(lat, lon, data["y"], data["x"])
+        if d < best_dist:
+            best_dist = d
+            best_node = nid
+    if best_node is None:
+        raise ValueError("Geen knooppunten gevonden in de graph.")
+    return best_node
+
+
+def build_knooppunt_graph(G_full: nx.MultiDiGraph) -> nx.Graph:
+    """
+    Bouw een vereenvoudigde graph met enkel knooppunten als nodes.
+    Edges verbinden direct-naburige knooppunten (geen tussenliggend knooppunt
+    op het kortste pad) met de werkelijke afstand en het volledige pad.
+    """
+    kp_nodes = [n for n, d in G_full.nodes(data=True) if "rcn_ref" in d]
+    kp_set = set(kp_nodes)
+
+    K = nx.Graph()
+    for n in kp_nodes:
+        nd = G_full.nodes[n]
+        K.add_node(n, y=nd["y"], x=nd["x"], rcn_ref=nd["rcn_ref"])
+
+    # Per knooppunt: Dijkstra om buren te vinden
+    for src in kp_nodes:
+        distances, paths = nx.single_source_dijkstra(
+            G_full, src, cutoff=15000, weight="length"
+        )
+        for dst in kp_nodes:
+            if dst <= src or dst not in distances:
+                continue
+            if K.has_edge(src, dst):
+                continue
+            path = paths[dst]
+            # Directe verbinding: geen ander knooppunt op het pad
+            if any(n in kp_set for n in path[1:-1]):
+                continue
+            K.add_edge(src, dst, length=distances[dst], full_path=path)
+
+    return K

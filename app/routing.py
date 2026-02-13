@@ -1,10 +1,10 @@
 import networkx as nx
 import numpy as np
-import itertools
 import time
 from . import weather
 from . import overpass
 from typing import List
+
 
 # --- Wind Effort Calculation ---
 def calculate_effort_cost(length: float, bearing: float, wind_speed: float, wind_direction: float) -> float:
@@ -23,7 +23,6 @@ def add_wind_effort_weight(G: nx.DiGraph, wind_speed_ms: float, wind_direction_d
         length = data.get('length', 0.0)
         bearing = data.get('bearing', None)
         if bearing is None:
-            # fallback: geen bearing => neutrale kost op basis van lengte
             cost = length
         else:
             cost = calculate_effort_cost(length, bearing, wind_speed_ms, wind_direction_deg)
@@ -33,7 +32,7 @@ def add_wind_effort_weight(G: nx.DiGraph, wind_speed_ms: float, wind_direction_d
 def _sum_path_attr_multidigraph(G: nx.MultiDiGraph, path: List[int], attr: str) -> float:
     """
     Som van attribuut over pad (nodes). Voor MultiDiGraph kiezen we per (u,v)
-    de 'beste' edge op basis van minimale attr-waarde als die bestaat; anders 1e edge.
+    de 'beste' edge op basis van minimale attr-waarde.
     """
     total = 0.0
     for u, v in zip(path[:-1], path[1:]):
@@ -47,61 +46,140 @@ def _sum_path_attr_multidigraph(G: nx.MultiDiGraph, path: List[int], attr: str) 
         if candidates:
             total += float(min(candidates))
         else:
-            # geen attr aanwezig, probeer lengte of 0
             fallback = [d.get('length', 0.0) for d in edge_data.values()]
             total += float(min(fallback) if fallback else 0.0)
     return total
 
 def _nodes_to_polyline(G: nx.MultiDiGraph, path: List[int]) -> list[list[tuple[float, float]]]:
-    """
-    Converteer node-lijst naar één polyline [(lat, lon), ...] in jouw API-formaat.
-    """
+    """Converteer node-lijst naar één polyline [(lat, lon), ...]."""
     coords = []
     for n in path:
         nd = G.nodes[n]
         coords.append((nd['y'], nd['x']))
     return [coords]
 
-def _debug_candidate_spokes(all_paths: dict, start_node, target_dist_m: float, G: nx.MultiDiGraph) -> dict:
-    """
-    Alleen aanroepen wanneer debug=True. (print is duur; vermijd standaard)
-    """
-    min_spoke_length = target_dist_m * 0.15
-    max_spoke_length = target_dist_m * 0.7
 
-    path_lengths = []
-    too_short = 0
-    too_long = 0
-    in_range = 0
+# --- Knooppunt loop: wind effort op condensed edges ---
 
-    for node, path in all_paths.items():
-        if node == start_node:
-            continue
-        length = _sum_path_attr_multidigraph(G, path, 'length')
-        path_lengths.append(length)
-        if length < min_spoke_length:
-            too_short += 1
-        elif length > max_spoke_length:
-            too_long += 1
+def _add_knooppunt_effort(K: nx.Graph, G_effort: nx.MultiDiGraph):
+    """
+    Bereken wind-effort per richting voor elke edge in de knooppuntgraph.
+    Slaat effort_fwd (u→v) en effort_rev (v→u) op.
+    """
+    for u, v, data in K.edges(data=True):
+        full_path = data["full_path"]
+        # Voorwaarts: pad zoals opgeslagen
+        data["effort_fwd"] = _sum_path_attr_multidigraph(G_effort, full_path, "effort")
+        # Achterwaarts: omgekeerd pad
+        data["effort_rev"] = _sum_path_attr_multidigraph(G_effort, full_path[::-1], "effort")
+
+
+def _expand_kp_loop(kp_loop: List[int], K: nx.Graph) -> List[int]:
+    """
+    Expandeer een knooppunt-loop [kp1, kp2, ..., kp1] naar het volledige
+    way-node pad voor geometrie op de kaart.
+    """
+    full_path = []
+    for i in range(len(kp_loop) - 1):
+        u, v = kp_loop[i], kp_loop[i + 1]
+        edge_data = K.edges[u, v]
+        segment = edge_data["full_path"]
+        # Pad kan in beide richtingen opgeslagen zijn
+        if segment[0] == u:
+            path_segment = segment
         else:
-            in_range += 1
+            path_segment = segment[::-1]
+        if i == 0:
+            full_path.extend(path_segment)
+        else:
+            full_path.extend(path_segment[1:])
+    return full_path
 
-    rcn_nodes = [n for n, data in G.nodes(data=True) if 'rcn_ref' in data]
 
-    return {
-        'total_paths': max(len(all_paths) - 1, 0),
-        'too_short': too_short,
-        'in_range': in_range,
-        'too_long': too_long,
-        'rcn_nodes': len(rcn_nodes),
-    }
+def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
+                          tolerance: float, max_depth: int = 15):
+    """
+    DFS-gebaseerde loop-zoeker op de knooppuntgraph.
+    Vindt alle eenvoudige cycli vanuit start_kp binnen de afstandstolerantie.
+    """
+    min_dist = target_m * (1 - tolerance)
+    max_dist = target_m * (1 + tolerance)
+    candidates = []
 
-def find_wind_optimized_loop(start_address: str, distance_km: float, tolerance: float = 0.2, debug: bool = False) -> dict:
+    # Stack: (huidige node, bezocht pad, geaccumuleerde afstand)
+    stack = [(start_kp, [start_kp], 0.0)]
+
+    while stack:
+        node, visited, dist = stack.pop()
+
+        for neighbor in K.neighbors(node):
+            edge_len = K.edges[node, neighbor]["length"]
+            new_dist = dist + edge_len
+
+            # Terug naar start? Check of het een geldige loop is
+            if neighbor == start_kp and len(visited) >= 3:
+                if min_dist <= new_dist <= max_dist:
+                    candidates.append((visited + [start_kp], new_dist))
+                continue
+
+            # Geen revisits (eenvoudige cyclus)
+            if neighbor in visited:
+                continue
+
+            # Dieptelimiet
+            if len(visited) >= max_depth:
+                continue
+
+            # Pruning: al te ver → skip
+            if new_dist > max_dist:
+                continue
+
+            # Pruning: afstand terug naar start (hemelsbreed) als ondergrens
+            n_data = K.nodes[neighbor]
+            s_data = K.nodes[start_kp]
+            dist_back = overpass._haversine(
+                n_data["y"], n_data["x"], s_data["y"], s_data["x"]
+            )
+            # Hemelsbreed is altijd korter dan via het netwerk,
+            # maar we geven wat marge (factor 0.7)
+            if new_dist + dist_back * 0.7 > max_dist:
+                continue
+
+            stack.append((neighbor, visited + [neighbor], new_dist))
+
+    return candidates
+
+
+def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
+    """
+    Score een knooppunt-loop: lagere score = beter.
+    Combineert wind-effort met afstandsafwijking.
+    """
+    total_effort = 0.0
+    total_length = 0.0
+    for i in range(len(kp_loop) - 1):
+        u, v = kp_loop[i], kp_loop[i + 1]
+        edge = K.edges[u, v]
+        total_length += edge["length"]
+        # Effort in de juiste richting
+        if edge["full_path"][0] == u:
+            total_effort += edge["effort_fwd"]
+        else:
+            total_effort += edge["effort_rev"]
+
+    distance_penalty = abs(total_length - target_m) * 5
+    return total_effort + distance_penalty
+
+
+# --- Hoofdfunctie ---
+
+def find_wind_optimized_loop(start_address: str, distance_km: float,
+                             tolerance: float = 0.2, debug: bool = False) -> dict:
     t_start = time.perf_counter()
     timings = {}
     stats = {}
 
-    # --- Step 1: Geocoding & Weather (cached) ---
+    # --- Stap 1: Geocoding & Weather (cached) ---
     coords = weather.get_coords_from_address(start_address)
     if not coords:
         raise ValueError(f"Could not geocode address: {start_address}")
@@ -111,10 +189,9 @@ def find_wind_optimized_loop(start_address: str, distance_km: float, tolerance: 
     timings['geocoding_and_weather'] = time.perf_counter() - t_start
     t_step = time.perf_counter()
 
-    # --- Step 2: Graph Download & Prep (Overpass RCN network) ---
+    # --- Stap 2: Graph ophalen en opbouwen ---
     target_dist_m = distance_km * 1000.0
-    # Radius iets groter dan halve afstand, zodat we genoeg netwerk hebben
-    radius_m = int(min(max(target_dist_m / 2.0, 3000), 15000))
+    radius_m = int(max(target_dist_m * 0.6, 5000))
 
     overpass_data = overpass.fetch_rcn_network(coords[0], coords[1], radius_m)
     G = overpass.build_graph(overpass_data)
@@ -124,136 +201,96 @@ def find_wind_optimized_loop(start_address: str, distance_km: float, tolerance: 
 
     G_effort = add_wind_effort_weight(G, wind_data['speed'], wind_data['direction'])
 
-    # Vind startnode (dichtstbijzijnde node in de graph)
+    # Condensed knooppuntgraph
+    K = overpass.build_knooppunt_graph(G)
+    if K.number_of_nodes() < 3:
+        raise ValueError("Te weinig knooppunten gevonden in de buurt. Probeer een ander adres of grotere afstand.")
+
+    _add_knooppunt_effort(K, G_effort)
+
+    # Start: dichtstbijzijnde knooppunt + aanlooppad
     start_node = overpass.nearest_node(G, coords[0], coords[1])
+    start_kp = overpass.nearest_knooppunt(G, coords[0], coords[1])
+
+    try:
+        approach_path = nx.shortest_path(G, start_node, start_kp, weight="length")
+        approach_dist = _sum_path_attr_multidigraph(G, approach_path, "length")
+    except nx.NetworkXNoPath:
+        approach_path = [start_kp]
+        approach_dist = 0.0
+
+    loop_target_m = target_dist_m - 2 * approach_dist
 
     timings['graph_download_and_prep'] = time.perf_counter() - t_step
     t_step = time.perf_counter()
 
-    # --- Step 3: Loop Finding Algorithm ---
-    # Beperk zoekruimte met cutoff op lengte (0.75 * target)
-    cutoff_len = target_dist_m * 0.75
-    all_paths = nx.single_source_dijkstra_path(G, start_node, cutoff=cutoff_len, weight='length')
-
-    # Debug info enkel bij debug=True
-    if debug:
-        debug_info = _debug_candidate_spokes(all_paths, start_node, target_dist_m, G)
-    else:
-        debug_info = {}
-
-    # Kandidaten (spokes) verzamelen
-    min_spoke = target_dist_m * 0.15
-    max_spoke = target_dist_m * 0.7
-
-    candidate_spokes = {}
-    for node, path in all_paths.items():
-        if node == start_node:
-            continue
-        length = _sum_path_attr_multidigraph(G, path, 'length')
-        if min_spoke < length < max_spoke:
-            effort = _sum_path_attr_multidigraph(G_effort, path, 'effort')
-            candidate_spokes[node] = {'path': path, 'length': length, 'effort': effort}
-
-    # Beperk aantal kandidaten (bijv. 60) voor combinatoriek; sorteer op lage effort, daarna langere lengte
-    if candidate_spokes:
-        sorted_nodes = sorted(candidate_spokes.keys(), key=lambda n: (candidate_spokes[n]['effort'], -candidate_spokes[n]['length']))
-        MAX_CANDIDATES = 60
-        selected_nodes = sorted_nodes[:MAX_CANDIDATES]
-        candidate_spokes = {n: candidate_spokes[n] for n in selected_nodes}
-
-    # Minder streng: niet automatisch falen bij <10 kandidaten
-    if len(candidate_spokes) < 3 and not debug:
-        raise ValueError("Not enough suitable routes found from start location. Try a different address or distance.")
-
+    # --- Stap 3: Loop zoeken op knooppuntgraph ---
     best_loop = None
-    best_loop_score = float('inf')
+    best_score = float("inf")
+    candidates = []
 
-    combinations_to_check = list(itertools.combinations(candidate_spokes.keys(), 2))
-    # Beperk combinaties indien nodig (bijv. max 3000 checks)
-    MAX_COMBOS = 3000
-    if len(combinations_to_check) > MAX_COMBOS:
-        combinations_to_check = combinations_to_check[:MAX_COMBOS]
+    # Probeer met toenemende tolerantie
+    for tol in [tolerance, tolerance + 0.1, tolerance + 0.2]:
+        candidates = _find_knooppunt_loops(K, start_kp, loop_target_m, tol)
+        if candidates:
+            break
 
-    stats['loop_combinations_checked'] = len(combinations_to_check)
+    stats['candidate_loops'] = len(candidates)
 
-    def _jaccard_nodes(a: list[int], b: list[int]) -> float:
-        sa, sb = set(a), set(b)
-        if not sa or not sb:
-            return 0.0
-        return len(sa & sb) / len(sa | sb)
-
-    for node_a, node_b in combinations_to_check:
-        path_a_data = candidate_spokes[node_a]
-        path_b_data = candidate_spokes[node_b]
-
-        # Vermijd sterk overlappende spokes
-        if _jaccard_nodes(path_a_data['path'], path_b_data['path']) > 0.33:
-            continue
-
-        try:
-            connecting_path = nx.shortest_path(G_effort, source=node_a, target=node_b, weight='effort')
-        except (nx.NetworkXNoPath, nx.NodeNotFound):
-            continue
-
-        full_loop = path_a_data['path'] + connecting_path[1:] + path_b_data['path'][::-1][1:]
-        if full_loop[0] != full_loop[-1]:
-            full_loop.append(full_loop[0])
-
-        total_length = _sum_path_attr_multidigraph(G, full_loop, 'length')
-
-        in_tolerance = (target_dist_m * (1 - tolerance) <= total_length <= target_dist_m * (1 + tolerance))
-        if not in_tolerance:
-            # we bewaren wel de beste benadering (fallback)
-            distance_diff = abs(total_length - target_dist_m)
-            approx_score = distance_diff  # zonder effort-penalty
-            if approx_score < best_loop_score:
-                best_loop_score = approx_score
-                best_loop = full_loop
-            continue
-
-        total_effort = _sum_path_attr_multidigraph(G_effort, full_loop, 'effort')
-        distance_diff = abs(total_length - target_dist_m)
-        score = total_effort + (distance_diff * 10)
-        if score < best_loop_score:
-            best_loop_score = score
-            best_loop = full_loop
+    for kp_loop, loop_dist in candidates:
+        score = _score_loop(kp_loop, K, loop_target_m)
+        if score < best_score:
+            best_score = score
+            best_loop = kp_loop
 
     timings['loop_finding_algorithm'] = time.perf_counter() - t_step
     t_step = time.perf_counter()
 
     if not best_loop:
-        raise ValueError("Could not find a suitable loop. Try changing the distance or starting point.")
+        raise ValueError("Kon geen geschikte lus vinden. Probeer een andere afstand of startpunt.")
 
-    # --- Step 4: Finalizing Route ---
-    route_geometry = _nodes_to_polyline(G, best_loop)
-    actual_distance_m = _sum_path_attr_multidigraph(G, best_loop, 'length')
+    # --- Stap 4: Route samenstellen ---
+    loop_full_path = _expand_kp_loop(best_loop, K)
 
-    junctions = [node_data['rcn_ref'] for n in best_loop if 'rcn_ref' in (node_data := G.nodes[n])]
+    # Voeg aanlooppad toe (heen en terug)
+    if len(approach_path) > 1:
+        full_route = approach_path[:-1] + loop_full_path + approach_path[::-1][1:]
+    else:
+        full_route = loop_full_path
+
+    route_geometry = _nodes_to_polyline(G, full_route)
+    actual_distance_m = _sum_path_attr_multidigraph(G, full_route, "length")
+
+    # Knooppuntnummers op de route
+    junctions = []
+    seen = set()
+    for n in best_loop[:-1]:  # skip laatste (= eerste)
+        ref = K.nodes[n].get("rcn_ref", "")
+        if ref and ref not in seen:
+            junctions.append(ref)
+            seen.add(ref)
 
     timings['route_finalizing'] = time.perf_counter() - t_step
     timings['total_duration'] = time.perf_counter() - t_start
 
-    # --- Step 5: Assemble Response ---
+    # --- Stap 5: Response ---
     response = {
         "start_address": start_address,
         "target_distance_km": distance_km,
         "actual_distance_km": round(actual_distance_m / 1000, 2),
-        "junctions": junctions or ["Junction data not available on this path"],
+        "junctions": junctions or ["Geen knooppunten op deze route"],
         "route_geometry": route_geometry,
         "wind_conditions": wind_data,
-        "message": "SUCCESS: An optimal wind-based loop was found."
+        "message": "SUCCESS: Een optimale windgebaseerde lus is gevonden."
     }
 
     if debug:
         stats['graph_nodes'] = G.number_of_nodes()
         stats['graph_edges'] = G.number_of_edges()
-        stats['candidate_spokes'] = len(candidate_spokes)
-        stats['best_loop_score'] = float(best_loop_score if best_loop_score != float('inf') else -1)
-        stats.update({k: v for k, v in debug_info.items() if k in ('total_paths', 'too_short', 'in_range', 'too_long', 'rcn_nodes')})
-
-        response['debug_data'] = {
-            "timings": timings,
-            "stats": stats
-        }
+        stats['knooppunten'] = K.number_of_nodes()
+        stats['knooppunt_edges'] = K.number_of_edges()
+        stats['best_loop_score'] = float(best_score if best_score != float('inf') else -1)
+        stats['approach_dist_m'] = round(approach_dist, 1)
+        response['debug_data'] = {"timings": timings, "stats": stats}
 
     return response

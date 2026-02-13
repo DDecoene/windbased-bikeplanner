@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - overpass_cache:/app/overpass_cache
+
+  frontend:
+    build: ./ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  overpass_cache:
