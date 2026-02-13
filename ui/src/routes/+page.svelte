@@ -85,9 +85,9 @@
 	function initializeMap(): void {
 		if (!mapContainer || mapInstance || !L) return;
 		mapInstance = L.map(mapContainer).setView([51.2089, 3.2242], 13);
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
 			attribution:
-				'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+				'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
 		}).addTo(mapInstance);
 	}
 
@@ -134,10 +134,12 @@
 		const latLngs = data.route_geometry[0];
 		if (!latLngs || latLngs.length === 0) return;
 
-		// Route polyline
-		routePolyline = L.polyline(latLngs, { color: '#3b82f6', weight: 5, opacity: 0.8 }).addTo(
-			mapInstance
-		);
+		// Route polyline — bright cyan glow
+		routePolyline = L.polyline(latLngs, {
+			color: '#22d3ee',
+			weight: 4,
+			opacity: 0.9
+		}).addTo(mapInstance);
 		mapInstance.fitBounds(routePolyline.getBounds().pad(0.1));
 
 		// Direction arrows
@@ -146,18 +148,19 @@
 		// Search radius circle
 		searchCircle = L.circle(data.start_coords, {
 			radius: data.search_radius_km * 1000,
-			color: '#93c5fd',
+			color: '#06b6d4',
 			weight: 1,
+			opacity: 0.3,
 			fill: false,
 			dashArray: '6 4'
 		}).addTo(mapInstance);
 
-		// Start marker (green)
+		// Start marker (emerald)
 		const startIcon = L.divIcon({
-			html: `<div style="background:#16a34a;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);">S</div>`,
+			html: `<div style="background:#10b981;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid rgba(255,255,255,0.3);box-shadow:0 0 12px rgba(16,185,129,0.5);">S</div>`,
 			className: '',
-			iconSize: [28, 28],
-			iconAnchor: [14, 14]
+			iconSize: [30, 30],
+			iconAnchor: [15, 15]
 		});
 		startMarker = L.marker(data.start_coords, { icon: startIcon })
 			.bindPopup(`<b>Start</b><br>${data.start_address}`)
@@ -166,10 +169,10 @@
 		// Junction markers
 		for (const jc of data.junction_coords) {
 			const icon = L.divIcon({
-				html: `<div style="background:#dc2626;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${jc.ref}</div>`,
+				html: `<div style="background:rgba(6,182,212,0.9);color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid rgba(255,255,255,0.2);box-shadow:0 0 8px rgba(6,182,212,0.4);">${jc.ref}</div>`,
 				className: '',
-				iconSize: [22, 22],
-				iconAnchor: [11, 11]
+				iconSize: [24, 24],
+				iconAnchor: [12, 12]
 			});
 			const marker = L.marker([jc.lat, jc.lon], { icon })
 				.bindPopup(`<b>Knooppunt ${jc.ref}</b>`)
@@ -213,12 +216,12 @@
 			const angle = (Math.atan2(lon2 - lon1, lat2 - lat1) * 180) / Math.PI;
 
 			const arrowIcon = L.divIcon({
-				html: `<svg width="14" height="14" viewBox="0 0 14 14" style="transform: rotate(${angle}deg)">
-					<path d="M7 0 L14 14 L7 10 L0 14 Z" fill="#2563eb" opacity="0.85"/>
+				html: `<svg width="12" height="12" viewBox="0 0 12 12" style="transform: rotate(${angle}deg)">
+					<path d="M6 0 L12 12 L6 8.5 L0 12 Z" fill="#22d3ee" opacity="0.8"/>
 				</svg>`,
 				className: '',
-				iconSize: [14, 14],
-				iconAnchor: [7, 7]
+				iconSize: [12, 12],
+				iconAnchor: [6, 6]
 			});
 
 			const marker = L.marker([lat, lon], { icon: arrowIcon, interactive: false }).addTo(
@@ -238,28 +241,38 @@
 	/>
 </svelte:head>
 
-<main class="mx-auto flex h-screen w-full max-w-4xl flex-col p-4 font-sans antialiased">
-	<header class="mb-6 shrink-0 text-center">
-		<h1 class="text-3xl font-bold text-gray-800">Windbased Bike Planner</h1>
-		<p class="text-gray-600">Find the optimal cycling loop based on the wind.</p>
+<main class="mx-auto flex h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
+	<!-- Header -->
+	<header class="shrink-0 text-center">
+		<h1
+			class="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent"
+		>
+			Windbased Bike Planner
+		</h1>
+		<p class="mt-1 text-sm text-gray-500">Wind-optimized cycling loops through the Belgian knooppunten network</p>
 	</header>
 
 	<!-- Form -->
-	<form on:submit|preventDefault={handleSubmit} class="mb-4 shrink-0 rounded-lg bg-white p-4 shadow-md">
+	<form
+		on:submit|preventDefault={handleSubmit}
+		class="shrink-0 rounded-xl border border-gray-800 bg-gray-900/80 p-5 shadow-lg backdrop-blur-sm"
+	>
 		<div class="mb-4">
-			<label for="address" class="mb-2 block font-semibold text-gray-700">Start Address</label>
+			<label for="address" class="mb-1.5 block text-sm font-medium text-gray-400"
+				>Start Address</label
+			>
 			<input
 				type="text"
 				id="address"
 				bind:value={startAddress}
-				class="w-full rounded-md border p-2 transition focus:ring-2 focus:ring-blue-500"
+				class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
 				placeholder="e.g., Grote Markt, Bruges, Belgium"
 				required
 			/>
 		</div>
-		<div class="mb-4">
-			<label for="distance" class="mb-2 block font-semibold text-gray-700">
-				Distance: <span class="font-bold text-blue-600">{distanceKm} km</span>
+		<div class="mb-5">
+			<label for="distance" class="mb-1.5 block text-sm font-medium text-gray-400">
+				Distance: <span class="font-semibold text-cyan-400">{distanceKm} km</span>
 			</label>
 			<div class="flex items-center gap-3">
 				<input
@@ -269,7 +282,7 @@
 					min="10"
 					max="150"
 					step="1"
-					class="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
+					class="h-1.5 flex-1"
 				/>
 				<input
 					type="number"
@@ -277,13 +290,13 @@
 					min="10"
 					max="150"
 					step="1"
-					class="w-20 rounded-md border p-1.5 text-center text-sm focus:ring-2 focus:ring-blue-500"
+					class="w-20 rounded-lg border border-gray-700 bg-gray-800 p-2 text-center text-sm text-gray-100 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
 				/>
 			</div>
 		</div>
 		<button
 			type="submit"
-			class="w-full rounded-md bg-blue-600 px-4 py-3 font-bold text-white transition-transform duration-150 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-400"
+			class="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:from-cyan-400 hover:to-blue-500 hover:shadow-cyan-500/25 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
 			disabled={isLoading}
 		>
 			{#if isLoading}
@@ -294,13 +307,14 @@
 		</button>
 	</form>
 
-	<!-- Results -->
-	<div class="flex flex-grow flex-col overflow-hidden rounded-lg bg-white p-4 shadow-md">
+	<!-- Results + Map -->
+	<div
+		class="flex min-h-0 flex-grow flex-col gap-3 overflow-auto rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-lg backdrop-blur-sm"
+	>
 		{#if errorMessage}
-			<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-4">
-				<p class="mb-2 font-semibold text-red-700">{errorMessage}</p>
-				<p class="mb-1 text-sm text-red-600">Suggestions:</p>
-				<ul class="list-inside list-disc text-sm text-red-600">
+			<div class="rounded-lg border border-red-900/50 bg-red-950/40 p-4">
+				<p class="mb-2 text-sm font-semibold text-red-400">{errorMessage}</p>
+				<ul class="list-inside list-disc space-y-0.5 text-xs text-red-400/70">
 					<li>Try adjusting the desired distance (shorter or longer)</li>
 					<li>Try a different starting address</li>
 					<li>The area might not have enough connected cycling junctions</li>
@@ -309,50 +323,71 @@
 		{/if}
 
 		{#if routeData}
-			<!-- Stats row -->
-			<div class="mb-3 grid shrink-0 grid-cols-3 gap-3">
-				<div class="rounded-md bg-blue-50 p-2.5 text-center">
-					<p class="text-xs text-gray-500">Distance</p>
-					<p class="text-lg font-bold text-blue-700">
-						{routeData.actual_distance_km} km
+			<!-- Stats -->
+			<div class="grid shrink-0 grid-cols-3 gap-2">
+				<div
+					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+						Distance
+					</p>
+					<p class="text-xl font-bold text-cyan-400">
+						{routeData.actual_distance_km}
+						<span class="text-sm font-normal text-gray-500">km</span>
 					</p>
 				</div>
-				<div class="rounded-md bg-blue-50 p-2.5 text-center">
-					<p class="text-xs text-gray-500">Junctions</p>
-					<p class="text-lg font-bold text-blue-700">{routeData.junction_coords.length}</p>
+				<div
+					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+						Junctions
+					</p>
+					<p class="text-xl font-bold text-cyan-400">{routeData.junction_coords.length}</p>
 				</div>
-				<div class="rounded-md bg-blue-50 p-2.5 text-center">
-					<p class="text-xs text-gray-500">Network</p>
-					<p class="text-lg font-bold text-blue-700">
-						{routeData.search_radius_km} km radius
+				<div
+					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+						Network
+					</p>
+					<p class="text-xl font-bold text-cyan-400">
+						{routeData.search_radius_km}
+						<span class="text-sm font-normal text-gray-500">km</span>
 					</p>
 				</div>
 			</div>
 
-			<!-- Wind conditions -->
-			<div class="mb-3 flex shrink-0 items-center justify-center gap-4 rounded-md bg-gray-50 p-2.5">
+			<!-- Wind -->
+			<div
+				class="flex shrink-0 items-center justify-center gap-6 rounded-lg border border-gray-800 bg-gray-800/50 px-4 py-2.5"
+			>
 				<div class="text-center">
-					<p class="text-xs text-gray-500">Wind Speed</p>
-					<p class="text-sm font-semibold">
-						{windSpeedKmh(routeData.wind_conditions.speed)} km/h
+					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+						Wind Speed
+					</p>
+					<p class="text-sm font-semibold text-gray-200">
+						{windSpeedKmh(routeData.wind_conditions.speed)}
+						<span class="text-gray-500">km/h</span>
 					</p>
 				</div>
-				<div class="flex items-center gap-1.5">
+				<div class="h-6 w-px bg-gray-700"></div>
+				<div class="flex items-center gap-2">
 					<div class="text-center">
-						<p class="text-xs text-gray-500">Direction</p>
-						<p class="text-sm font-semibold">
+						<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+							Direction
+						</p>
+						<p class="text-sm font-semibold text-gray-200">
 							{degreesToCardinal(routeData.wind_conditions.direction)}
-							({routeData.wind_conditions.direction.toFixed(0)}°)
+							<span class="text-gray-500"
+								>{routeData.wind_conditions.direction.toFixed(0)}°</span
+							>
 						</p>
 					</div>
-					<svg
-						width="24"
-						height="24"
-						viewBox="-12 -12 24 24"
-						class="text-gray-700"
-					>
+					<svg width="20" height="20" viewBox="-12 -12 24 24" class="text-cyan-400">
 						<g
-							transform="rotate({windArrowRotation(routeData.wind_conditions.direction)})"
+							transform="rotate({windArrowRotation(
+								routeData.wind_conditions.direction
+							)})"
 						>
 							<path
 								d="M 0 -10 L 8 0 L 2 0 L 2 8 L -2 8 L -2 0 L -8 0 Z"
@@ -363,15 +398,23 @@
 				</div>
 			</div>
 
-			<!-- Junction sequence -->
-			<div class="mb-3 shrink-0 rounded-md bg-amber-50 p-2.5 text-center">
-				<p class="mb-1 text-xs text-gray-500">Route</p>
-				<p class="text-sm font-semibold text-amber-800">
-					{routeData.junctions.join(' → ')}
+			<!-- Route junctions -->
+			<div
+				class="shrink-0 rounded-lg border-l-2 border-cyan-500/50 bg-gray-800/30 px-3 py-2"
+			>
+				<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+					Route
+				</p>
+				<p class="text-sm text-cyan-300/80">
+					{routeData.junctions.join(' \u2192 ')}
 				</p>
 			</div>
 		{/if}
 
-		<div bind:this={mapContainer} class="min-h-[300px] w-full flex-1 rounded-md bg-gray-200" />
+		<!-- Map -->
+		<div
+			bind:this={mapContainer}
+			class="min-h-[300px] w-full flex-1 overflow-hidden rounded-lg ring-1 ring-gray-800"
+		/>
 	</div>
 </main>
