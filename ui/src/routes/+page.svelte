@@ -23,6 +23,7 @@
 	let mapContainer: HTMLDivElement;
 	let mapInstance: Map | undefined;
 	let routePolyline: Polyline | null = null;
+	let arrowMarkers: import('leaflet').Marker[] = [];
 
 	// Load Leaflet dynamically on component mount to avoid SSR issues
 	onMount(async () => {
@@ -62,19 +63,79 @@
 	function drawRouteOnMap(geometry: [number, number][][]): void {
 		if (!mapInstance || !L) return;
 
-		// Clear any previous route from the map
+		// Clear previous route and arrows
 		if (routePolyline) {
 			mapInstance.removeLayer(routePolyline);
 		}
+		for (const m of arrowMarkers) {
+			mapInstance.removeLayer(m);
+		}
+		arrowMarkers = [];
 
 		const latLngs = geometry[0];
 
 		if (latLngs && latLngs.length > 0) {
-			// Note: Leaflet's Polyline expects LatLng tuples, which match our geometry type
 			routePolyline = L.polyline(latLngs, { color: '#3b82f6', weight: 5 }).addTo(mapInstance);
-
-			// Adjust the map view to fit the entire route with some padding
 			mapInstance.fitBounds(routePolyline.getBounds().pad(0.1));
+
+			// Add direction arrows at regular intervals along the route
+			addDirectionArrows(latLngs);
+		}
+	}
+
+	function addDirectionArrows(latLngs: [number, number][]): void {
+		if (!mapInstance || !L || latLngs.length < 2) return;
+
+		// Calculate total route distance in pixels-ish (use point distances)
+		const distances: number[] = [0];
+		for (let i = 1; i < latLngs.length; i++) {
+			const [lat1, lon1] = latLngs[i - 1];
+			const [lat2, lon2] = latLngs[i];
+			const d = Math.sqrt((lat2 - lat1) ** 2 + (lon2 - lon1) ** 2);
+			distances.push(distances[i - 1] + d);
+		}
+		const totalDist = distances[distances.length - 1];
+		if (totalDist === 0) return;
+
+		// Place an arrow every ~5% of the route (roughly 20 arrows)
+		const interval = totalDist / 20;
+		let nextArrowAt = interval;
+		let segIdx = 0;
+
+		while (nextArrowAt < totalDist - interval * 0.5) {
+			// Find the segment containing this distance
+			while (segIdx < distances.length - 1 && distances[segIdx + 1] < nextArrowAt) {
+				segIdx++;
+			}
+			if (segIdx >= latLngs.length - 1) break;
+
+			const segStart = distances[segIdx];
+			const segEnd = distances[segIdx + 1];
+			const ratio = (nextArrowAt - segStart) / (segEnd - segStart);
+
+			const [lat1, lon1] = latLngs[segIdx];
+			const [lat2, lon2] = latLngs[segIdx + 1];
+			const lat = lat1 + ratio * (lat2 - lat1);
+			const lon = lon1 + ratio * (lon2 - lon1);
+
+			// Bearing in degrees
+			const angle = (Math.atan2(lon2 - lon1, lat2 - lat1) * 180) / Math.PI;
+
+			const arrowIcon = L.divIcon({
+				html: `<svg width="14" height="14" viewBox="0 0 14 14" style="transform: rotate(${angle}deg)">
+					<path d="M7 0 L14 14 L7 10 L0 14 Z" fill="#2563eb" opacity="0.85"/>
+				</svg>`,
+				className: '',
+				iconSize: [14, 14],
+				iconAnchor: [7, 7]
+			});
+
+			const marker = L.marker([lat, lon], { icon: arrowIcon, interactive: false }).addTo(
+				mapInstance!
+			);
+			arrowMarkers.push(marker);
+
+			nextArrowAt += interval;
 		}
 	}
 </script>
