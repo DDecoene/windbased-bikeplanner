@@ -20,6 +20,7 @@ Run `docker compose up --build -d` from the project root. Verify the build succe
 
 Read the current versions of these files and update them to reflect any changes made during this session:
 
+- **BUSINESS_ANALYSIS.md** - Update if added features change what is said here. report the differences.
 - **TECHNICAL_PLAN.md** — Update status of items, add new items if features were added
 - **CLAUDE.md** — Update architecture/key details sections if anything changed
 - **README.md** — Update description, tech stack, or structure if relevant

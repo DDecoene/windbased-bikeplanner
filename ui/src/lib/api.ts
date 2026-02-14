@@ -34,7 +34,8 @@ export interface RouteResponse {
 export async function generateRoute(
 	start_address: string,
 	distance_km: number,
-	planned_datetime?: string | null
+	planned_datetime?: string | null,
+	authToken?: string | null
 ): Promise<RouteResponse> {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), 120_000);
@@ -44,23 +45,34 @@ export async function generateRoute(
 		body.planned_datetime = planned_datetime;
 	}
 
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json'
+	};
+	if (authToken) {
+		headers['Authorization'] = `Bearer ${authToken}`;
+	}
+
 	let response: Response;
 	try {
 		response = await fetch(`${API_URL}/generate-route`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
+			headers,
 			body: JSON.stringify(body),
 			signal: controller.signal
 		});
 	} catch (e: any) {
 		if (e.name === 'AbortError') {
-			throw new Error('Het verzoek is verlopen na 2 minuten. Probeer een kortere afstand of een ander adres.');
+			throw new Error(
+				'Het verzoek is verlopen na 2 minuten. Probeer een kortere afstand of een ander adres.'
+			);
 		}
 		throw e;
 	} finally {
 		clearTimeout(timeout);
+	}
+
+	if (response.status === 401) {
+		throw new Error('Je bent niet ingelogd. Log in en probeer het opnieuw.');
 	}
 
 	if (!response.ok) {

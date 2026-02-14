@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Wind-optimized cycling loop route planner for Belgium. Uses the Belgian fietsknooppunten (cycling node network) via direct Overpass API queries + networkx, real-time wind from Open-Meteo, and Nominatim geocoding. No API keys required.
+Wind-optimized cycling loop route planner for Belgium. Uses the Belgian fietsknooppunten (cycling node network) via direct Overpass API queries + networkx, real-time wind from Open-Meteo, and Nominatim geocoding. Authentication via Clerk (required for route generation).
 
 ## Commands
 
@@ -39,7 +39,7 @@ pnpm lint            # prettier --check
 ## Architecture
 
 **Backend (`app/`)**
-- `main.py` — FastAPI app with `POST /generate-route` endpoint. CORS configurable via `CORS_ORIGINS` env var (falls back to localhost:5173 and :3000). Rate-limited to 10 req/min per IP via slowapi. Structured logging configured here.
+- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required). CORS configurable via `CORS_ORIGINS` env var (falls back to localhost:5173 and :3000). Rate-limited to 10 req/min per IP via slowapi. Structured logging configured here.
 - `routing.py` — Core algorithm: geocode → fetch wind → build full RCN graph → build condensed knooppunt graph → DFS loop finder with distance-budget pruning → wind-effort scoring → expand to full geometry.
 - `overpass.py` — Overpass API client: fetches RCN route relations + ways + knooppunt nodes, builds a full networkx MultiDiGraph, and a condensed knooppunt-only Graph (early-stop Dijkstra). Disk-cached (1 week TTL, `overpass_cache/`, auto-cleanup: expired files + 500MB cap). Retry with exponential backoff (2 retries) on timeout/connection/429/503/504. Overpass URL configurable via `OVERPASS_URL` env var (default: kumi.systems mirror).
 - `weather.py` — Nominatim geocoding (24h TTL cache), Open-Meteo real-time wind (10min TTL cache), and `get_forecast_wind_data()` for planned rides (1h TTL cache, hourly forecast up to 16 days). All with retry (2 retries, exponential backoff).
@@ -49,10 +49,17 @@ pnpm lint            # prettier --check
 **Frontend (`ui/`)**
 - SvelteKit app (Svelte 5, Tailwind CSS v4, pnpm, adapter-node).
 - Dark theme with cyan accents, CARTO Voyager map tiles.
-- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. Footer with Privacy + Contact links.
-- `src/routes/privacy/+page.svelte` — Static privacy policy page (no cookies, no analytics, third-party API disclosure).
+- **Authentication**: `svelte-clerk` SDK — ClerkProvider in layout, `SignedIn`/`SignedOut` components, UserButton avatar+dropdown. Sign-in required to generate routes (form visible to all, auth check on submit, auto-generate after login redirect).
+- `src/hooks.server.ts` — Clerk server hook via `withClerkHandler()`.
+- `src/routes/+layout.server.ts` — SSR auth props via `buildClerkProps()`.
+- `src/routes/+layout.svelte` — ClerkProvider wrapper + AuthHeader component.
+- `src/lib/AuthHeader.svelte` — Fixed top-right auth UI (avatar when signed in, "Inloggen" link when signed out).
+- `src/routes/sign-in/[...rest]/+page.svelte` — Clerk SignIn component (dark themed).
+- `src/routes/sign-up/[...rest]/+page.svelte` — Clerk SignUp component (dark themed).
+- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. Auth check on submit with sessionStorage form persistence. Footer with Privacy + Contact links.
+- `src/routes/privacy/+page.svelte` — Privacy policy (Clerk auth disclosure, third-party API disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
-- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
+- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
 - `src/app.html` — Static OG/Twitter meta tags (Dutch, `og:locale=nl_BE`). PWA manifest + theme-color.
 
 **Docker**
@@ -60,7 +67,7 @@ pnpm lint            # prettier --check
 - `ui/Dockerfile` — Node 22-slim multi-stage frontend build, non-root `appuser`.
 - `docker-compose.yml` — backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volume for overpass_cache.
 - `watchdog.sh` — Infrastructure health monitor (checks backend `/health` + frontend every 60s, alerts on status change).
-- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, optionally `CORS_ORIGINS`, `OVERPASS_URL`.
+- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, optionally `CORS_ORIGINS`, `OVERPASS_URL`.
 
 ## Key Details
 
@@ -68,7 +75,7 @@ pnpm lint            # prettier --check
 - Code comments and some variable names are in **Dutch**.
 - Geocoding is restricted to Belgium (`countrycodes=be`).
 - No database — RCN network is fetched on the fly via Overpass API (cached to disk for 1 week).
-- No API keys needed for core functionality — Open-Meteo and Nominatim are free/unauthenticated.
+- **Clerk authentication** required for route generation. Env vars: `PUBLIC_CLERK_PUBLISHABLE_KEY` (frontend), `CLERK_SECRET_KEY` (backend). Backend verifies JWT via `fastapi-clerk-auth` (JWKS endpoint). Sign-in methods: Google OAuth + email/password.
 - Telegram notifications are optional — configured via `.env` (see `.env.example`).
 - Prettier config: tabs, single quotes, no trailing commas, 100 char width.
 

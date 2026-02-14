@@ -66,9 +66,9 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 
 ## Key Features to Add for Product-Market Fit
 
-1. **GPX export** — cyclists need this for bike computers (Garmin, Wahoo)
-2. **User accounts + route history** — retention driver
-3. **Mobile PWA** — most cyclists plan on phones
+1. ~~**GPX export**~~ — ✅ done
+2. ~~**User accounts**~~ — ✅ done (Clerk auth, Google + email). Route history/favorites not yet implemented.
+3. ~~**Mobile PWA**~~ — ✅ done (installable)
 4. **Route preferences** — avoid busy roads, prefer scenic, headwind tolerance slider
 5. **Multi-day route planning** — use weather forecast for optimal departure day
 6. **Social sharing** — shareable route links with wind conditions

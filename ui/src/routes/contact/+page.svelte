@@ -20,7 +20,7 @@
 		},
 		{
 			q: 'Moet ik een account aanmaken?',
-			a: 'Nee. RGWND is volledig gratis te gebruiken zonder account, zonder login en zonder tracking. Voer gewoon je startadres en gewenste afstand in.'
+			a: 'Ja, om routes te genereren heb je een gratis account nodig. Je kunt je snel registreren met je Google-account of een e-mailadres. Het aanmaken van een route is en blijft gratis.'
 		},
 		{
 			q: 'Kan ik de route op mijn fietscomputer gebruiken?',
@@ -42,12 +42,25 @@
 </svelte:head>
 
 <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 p-6 font-sans antialiased">
-	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400">&larr; Terug naar RGWND</a>
+	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400"
+		>&larr; Terug naar RGWND</a
+	>
 
 	<!-- Email -->
 	<section class="flex flex-col items-center gap-3 text-center">
-		<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="h-10 w-10 text-cyan-400"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="1.5"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+			/>
 		</svg>
 		<h1 class="text-2xl font-bold text-gray-100">Neem contact op</h1>
 		<a
@@ -72,7 +85,10 @@
 						<span>{faq.q}</span>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							class="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 {openIndex === i ? 'rotate-180' : ''}"
+							class="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 {openIndex ===
+							i
+								? 'rotate-180'
+								: ''}"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"

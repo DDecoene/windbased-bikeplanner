@@ -14,7 +14,7 @@ Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwer
 6. **Return** the route as a polyline with junction waypoints
 7. **Export** as GPX for bike computers (Garmin, Wahoo, etc.)
 
-No API keys required — all services used are free and unauthenticated.
+Free account required to generate routes (Clerk authentication — Google or email sign-up).
 
 ## Running with Docker
 
@@ -47,6 +47,7 @@ pnpm dev
 
 **Backend**
 - Python 3.12, FastAPI, slowapi (rate limiting)
+- Clerk JWT authentication (`fastapi-clerk-auth`)
 - Overpass API for fietsknooppunten network data
 - networkx for graph operations and routing
 - Open-Meteo for real-time and forecasted wind data (up to 16 days ahead)
@@ -55,6 +56,7 @@ pnpm dev
 
 **Frontend**
 - SvelteKit (Svelte 5), Tailwind CSS v4
+- Clerk authentication (`svelte-clerk` — Google + email sign-up)
 - Leaflet for map rendering (CARTO Voyager tiles)
 - GPX export for bike computers
 - Planned ride: pick a future date/time, route for forecasted wind (up to 16 days)
@@ -76,11 +78,14 @@ pnpm dev
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for alerts | _(disabled)_ |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for alerts | _(disabled)_ |
 | `OVERPASS_URL` | Overpass API endpoint | `https://overpass.kumi.systems/api/interpreter` |
+| `PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (frontend) | _(required)_ |
+| `CLERK_SECRET_KEY` | Clerk secret key (backend JWT verification) | _(required)_ |
 
 ## Roadmap
 
 - **Netherlands support** — extend beyond Belgium
 - ~~**Planned rides**~~ — ✅ done, free for all users
+- ~~**User accounts**~~ — ✅ done, Clerk auth (Google + email)
 - **Wind forecast overview** — show the best day to ride this week
 - **Privacy-friendly analytics** — Plausible or Umami
 
@@ -95,8 +100,11 @@ app/
   models.py      — Pydantic request/response models
   notify.py      — Telegram ops alerts (optional)
 ui/
-  src/routes/          — SvelteKit pages (home, privacy, contact)
+  src/routes/          — SvelteKit pages (home, privacy, contact, sign-in, sign-up)
+  src/routes/sign-in/  — Clerk sign-in page
+  src/routes/sign-up/  — Clerk sign-up page
   src/routes/privacy/  — Privacy policy page
   src/routes/contact/  — Contact page with FAQ accordion
-  src/lib/             — API client and types
+  src/lib/             — API client, types, AuthHeader component
+  src/hooks.server.ts  — Clerk server hook
 ```

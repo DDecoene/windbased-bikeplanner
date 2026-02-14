@@ -69,7 +69,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 | 18 | PWA manifest | ✅ Done | manifest.json, custom icons, installable on phones |
 | 19 | Netherlands support | ⏳ Pending | Remove `countrycodes=be` restriction, same Overpass approach works |
 | 20 | Wind forecast overview | ⏳ Pending | Show best day to ride this week using multi-day forecast |
-| 21 | User accounts | ⏳ Pending | Route history, favorites, preferences |
+| 21 | User accounts | ✅ Done | Clerk auth (Google + email), required for route generation. Backend JWT verification via `fastapi-clerk-auth`. |
 | 22 | Analytics | ⏳ Pending | Plausible or Umami (privacy-friendly, self-hostable) |
 
 ## Premium Features (Paid Subscription)
@@ -143,3 +143,4 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Add contact page with FAQ accordion (`/contact`)
 - [x] Add footer with Privacy + Contact links
 - [x] Translate all frontend text to Dutch
+- [x] Add Clerk authentication (sign-in/sign-up pages, backend JWT verification, auth-gated route generation)

@@ -3,10 +3,13 @@
 	import type { RouteResponse } from '$lib/api';
 	import { generateRoute } from '$lib/api';
 	import 'leaflet/dist/leaflet.css';
+	import { useClerkContext } from 'svelte-clerk';
+	import { goto } from '$app/navigation';
 
 	import type { Map, Polyline, Marker, Circle } from 'leaflet';
 
 	let L: typeof import('leaflet') | undefined;
+	const ctx = useClerkContext();
 
 	// Form state
 	let startAddress: string = 'Grote Markt, Bruges, Belgium';
@@ -72,14 +75,32 @@
 	}
 
 	function escapeXml(s: string): string {
-		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+		return s
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
 	}
 
 	// --- Helpers ---
 
 	const CARDINAL_DIRS = [
-		'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-		'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+		'N',
+		'NNE',
+		'NE',
+		'ENE',
+		'E',
+		'ESE',
+		'SE',
+		'SSE',
+		'S',
+		'SSW',
+		'SW',
+		'WSW',
+		'W',
+		'WNW',
+		'NW',
+		'NNW'
 	];
 
 	function degreesToCardinal(deg: number): string {
@@ -151,6 +172,27 @@
 		if (typeof window !== 'undefined') {
 			L = await import('leaflet');
 			initializeMap();
+
+			// Check for pending route after sign-in redirect
+			const pendingRoute = sessionStorage.getItem('rgwnd_pending_route');
+			if (pendingRoute) {
+				sessionStorage.removeItem('rgwnd_pending_route');
+				const params = new URLSearchParams(pendingRoute);
+				if (params.get('address')) startAddress = params.get('address')!;
+				if (params.get('distance')) distanceKm = Number(params.get('distance'));
+				if (params.get('plannedDatetime')) {
+					usePlannedRide = true;
+					plannedDatetime = params.get('plannedDatetime')!;
+				}
+				if (params.get('autoGenerate') === 'true') {
+					// Wait a tick for Clerk to initialize
+					setTimeout(() => {
+						if (ctx.auth.userId) {
+							handleSubmit();
+						}
+					}, 1000);
+				}
+			}
 		}
 	});
 
@@ -180,6 +222,21 @@
 	// --- Submit ---
 
 	async function handleSubmit(): Promise<void> {
+		// Check if user is signed in
+		if (!ctx.auth.userId) {
+			// Save form state and redirect to sign-in
+			const params = new URLSearchParams();
+			params.set('address', startAddress);
+			params.set('distance', String(distanceKm));
+			if (usePlannedRide && plannedDatetime) {
+				params.set('plannedDatetime', plannedDatetime);
+			}
+			params.set('autoGenerate', 'true');
+			sessionStorage.setItem('rgwnd_pending_route', params.toString());
+			goto('/sign-in');
+			return;
+		}
+
 		isLoading = true;
 		errorMessage = null;
 		routeData = null;
@@ -187,7 +244,8 @@
 
 		try {
 			const dt = usePlannedRide && plannedDatetime ? plannedDatetime : null;
-			const data = await generateRoute(startAddress, distanceKm, dt);
+			const token = await ctx.session?.getToken();
+			const data = await generateRoute(startAddress, distanceKm, dt, token);
 			routeData = data;
 			drawRoute(data);
 		} catch (e: any) {
@@ -322,10 +380,14 @@
 		>
 			RGWND
 		</h1>
-		<p class="mt-0.5 text-lg tracking-[0.3em] font-light">
-			<span class="text-gray-600">r</span><span class="text-cyan-400">u</span><span class="text-gray-600">gw</span><span class="text-cyan-400">i</span><span class="text-gray-600">nd</span>
+		<p class="mt-0.5 text-lg font-light tracking-[0.3em]">
+			<span class="text-gray-600">r</span><span class="text-cyan-400">u</span><span
+				class="text-gray-600">gw</span
+			><span class="text-cyan-400">i</span><span class="text-gray-600">nd</span>
 		</p>
-		<p class="mt-1 text-sm text-gray-500">Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk</p>
+		<p class="mt-1 text-sm text-gray-500">
+			Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk
+		</p>
 	</header>
 
 	<!-- Form -->
@@ -334,14 +396,12 @@
 		class="shrink-0 rounded-xl border border-gray-800 bg-gray-900/80 p-5 shadow-lg backdrop-blur-sm"
 	>
 		<div class="mb-4">
-			<label for="address" class="mb-1.5 block text-sm font-medium text-gray-400"
-				>Startadres</label
-			>
+			<label for="address" class="mb-1.5 block text-sm font-medium text-gray-400">Startadres</label>
 			<input
 				type="text"
 				id="address"
 				bind:value={startAddress}
-				class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+				class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none"
 				placeholder="bv. Grote Markt, Brugge"
 				required
 			/>
@@ -366,16 +426,14 @@
 					min="10"
 					max="150"
 					step="1"
-					class="w-20 rounded-lg border border-gray-700 bg-gray-800 p-2 text-center text-sm text-gray-100 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+					class="w-20 rounded-lg border border-gray-700 bg-gray-800 p-2 text-center text-sm text-gray-100 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none"
 				/>
 			</div>
 		</div>
 		<!-- Planned ride toggle -->
 		<div class="mb-5 rounded-lg border border-gray-700 bg-gray-800/40 p-4">
 			<div class="flex items-center justify-between">
-				<label for="planned-toggle" class="text-sm font-medium text-gray-400">
-					Geplande rit
-				</label>
+				<label for="planned-toggle" class="text-sm font-medium text-gray-400"> Geplande rit </label>
 				<button
 					type="button"
 					id="planned-toggle"
@@ -385,7 +443,7 @@
 					on:click={() => {
 						usePlannedRide = !usePlannedRide;
 					}}
-					class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950
+					class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 focus:outline-none
 						{usePlannedRide ? 'bg-cyan-500' : 'bg-gray-600'}"
 				>
 					<span
@@ -405,15 +463,26 @@
 						bind:value={plannedDatetime}
 						min={getMinDatetime()}
 						max={getMaxDatetime()}
-						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none"
 						required
 					/>
 					{#if plannedDatetime}
 						{@const confidence = getForecastConfidence(plannedDatetime)}
 						{#if confidence}
 							<p class="mt-1.5 text-xs {confidence.color}">
-								<svg xmlns="http://www.w3.org/2000/svg" class="mr-1 inline h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="mr-1 inline h-3 w-3"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
 								</svg>
 								Windvoorspelling: {confidence.label}
 							</p>
@@ -425,7 +494,7 @@
 
 		<button
 			type="submit"
-			class="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:from-cyan-400 hover:to-blue-500 hover:shadow-cyan-500/25 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
+			class="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:from-cyan-400 hover:to-blue-500 hover:shadow-cyan-500/25 focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
 			disabled={isLoading}
 		>
 			{#if isLoading}
@@ -455,13 +524,32 @@
 			<!-- Planned ride banner -->
 			{#if routeData.planned_datetime}
 				{@const confidence = getForecastConfidence(routeData.planned_datetime)}
-				<div class="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-4 py-2.5">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+				<div
+					class="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-4 py-2.5"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4 shrink-0 text-cyan-400"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+						/>
 					</svg>
 					<div>
 						<p class="text-sm font-medium text-cyan-300">
-							Gepland: {new Date(routeData.planned_datetime).toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+							Gepland: {new Date(routeData.planned_datetime).toLocaleDateString('nl-BE', {
+								weekday: 'long',
+								day: 'numeric',
+								month: 'long',
+								hour: '2-digit',
+								minute: '2-digit'
+							})}
 						</p>
 						{#if confidence}
 							<p class="text-xs {confidence.color}">
@@ -474,31 +562,19 @@
 
 			<!-- Stats -->
 			<div class="grid shrink-0 grid-cols-3 gap-2">
-				<div
-					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Afstand
-					</p>
+				<div class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center">
+					<p class="text-[10px] font-medium tracking-wider text-gray-500 uppercase">Afstand</p>
 					<p class="text-xl font-bold text-cyan-400">
 						{routeData.actual_distance_km}
 						<span class="text-sm font-normal text-gray-500">km</span>
 					</p>
 				</div>
-				<div
-					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Knooppunten
-					</p>
+				<div class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center">
+					<p class="text-[10px] font-medium tracking-wider text-gray-500 uppercase">Knooppunten</p>
 					<p class="text-xl font-bold text-cyan-400">{routeData.junction_coords.length}</p>
 				</div>
-				<div
-					class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Netwerk
-					</p>
+				<div class="rounded-lg border border-gray-800 bg-gray-800/50 p-3 text-center">
+					<p class="text-[10px] font-medium tracking-wider text-gray-500 uppercase">Netwerk</p>
 					<p class="text-xl font-bold text-cyan-400">
 						{routeData.search_radius_km}
 						<span class="text-sm font-normal text-gray-500">km</span>
@@ -511,7 +587,7 @@
 				class="flex shrink-0 items-center justify-center gap-6 rounded-lg border border-gray-800 bg-gray-800/50 px-4 py-2.5"
 			>
 				<div class="text-center">
-					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+					<p class="text-[10px] font-medium tracking-wider text-gray-500 uppercase">
 						{routeData.planned_datetime ? 'Voorspelde wind' : 'Windsnelheid'}
 					</p>
 					<p class="text-sm font-semibold text-gray-200">
@@ -522,38 +598,23 @@
 				<div class="h-6 w-px bg-gray-700"></div>
 				<div class="flex items-center gap-2">
 					<div class="text-center">
-						<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-							Richting
-						</p>
+						<p class="text-[10px] font-medium tracking-wider text-gray-500 uppercase">Richting</p>
 						<p class="text-sm font-semibold text-gray-200">
 							{degreesToCardinal(routeData.wind_conditions.direction)}
-							<span class="text-gray-500"
-								>{routeData.wind_conditions.direction.toFixed(0)}°</span
-							>
+							<span class="text-gray-500">{routeData.wind_conditions.direction.toFixed(0)}°</span>
 						</p>
 					</div>
 					<svg width="20" height="20" viewBox="-12 -12 24 24" class="text-cyan-400">
-						<g
-							transform="rotate({windArrowRotation(
-								routeData.wind_conditions.direction
-							)})"
-						>
-							<path
-								d="M 0 -10 L 8 0 L 2 0 L 2 8 L -2 8 L -2 0 L -8 0 Z"
-								fill="currentColor"
-							/>
+						<g transform="rotate({windArrowRotation(routeData.wind_conditions.direction)})">
+							<path d="M 0 -10 L 8 0 L 2 0 L 2 8 L -2 8 L -2 0 L -8 0 Z" fill="currentColor" />
 						</g>
 					</svg>
 				</div>
 			</div>
 
 			<!-- Route junctions -->
-			<div
-				class="shrink-0 rounded-lg border-l-2 border-cyan-500/50 bg-gray-800/30 px-3 py-2"
-			>
-				<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-					Route
-				</p>
+			<div class="shrink-0 rounded-lg border-l-2 border-cyan-500/50 bg-gray-800/30 px-3 py-2">
+				<p class="text-[10px] font-medium tracking-wider text-gray-500 uppercase">Route</p>
 				<p class="text-sm text-cyan-300/80">
 					{routeData.junctions.join(' \u2192 ')}
 				</p>
@@ -563,10 +624,21 @@
 			<button
 				type="button"
 				on:click={() => downloadGPX(routeData!)}
-				class="shrink-0 flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
+				class="flex shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
 			>
-				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-4 w-4"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+					/>
 				</svg>
 				Download GPX
 			</button>
@@ -580,8 +652,8 @@
 	</div>
 </main>
 
-<footer class="mx-auto w-full max-w-5xl px-4 pb-6 pt-2 text-center text-xs text-gray-600">
-	<a href="/privacy" class="hover:text-gray-400 transition">Privacybeleid</a>
+<footer class="mx-auto w-full max-w-5xl px-4 pt-2 pb-6 text-center text-xs text-gray-600">
+	<a href="/privacy" class="transition hover:text-gray-400">Privacybeleid</a>
 	<span class="mx-2">·</span>
-	<a href="/contact" class="hover:text-gray-400 transition">Contact</a>
+	<a href="/contact" class="transition hover:text-gray-400">Contact</a>
 </footer>

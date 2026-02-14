@@ -2,13 +2,15 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+
+from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
 
 from .models import RouteRequest, RouteResponse
 from . import routing
@@ -20,6 +22,14 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+# --- Clerk auth ---
+_clerk_jwks_url = os.environ.get(
+    "CLERK_JWKS_URL",
+    "https://smiling-termite-96.clerk.accounts.dev/.well-known/jwks.json"
+)
+clerk_config = ClerkConfig(jwks_url=_clerk_jwks_url)
+clerk_auth = ClerkHTTPBearer(config=clerk_config)
 
 # --- Rate limiter ---
 limiter = Limiter(key_func=get_remote_address)
@@ -60,7 +70,14 @@ app.add_middleware(
 
 @app.post("/generate-route", response_model=RouteResponse)
 @limiter.limit("10/minute")
-async def generate_route(request: Request, route_request: RouteRequest, debug: bool = False):
+async def generate_route(
+    request: Request,
+    route_request: RouteRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(clerk_auth),
+    debug: bool = False,
+):
+    user_id = credentials.decoded.get("sub")
+    logger.info("Route request from user %s: %s, %s km", user_id, route_request.start_address, route_request.distance_km)
     planned_dt = route_request.planned_datetime
     if planned_dt is not None:
         # Validate: must be in the future and within 16-day forecast horizon
