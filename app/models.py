@@ -1,9 +1,15 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import List, Tuple, Optional, Dict
 
 class RouteRequest(BaseModel):
     start_address: str = Field(..., max_length=200, example="Grote Markt, Bruges, Belgium")
     distance_km: float = Field(..., gt=5, le=200, example=45.5)
+    planned_datetime: Optional[datetime] = Field(
+        None,
+        description="Plan a ride for a future date/time (up to 16 days ahead). Premium feature.",
+        example="2026-02-20T14:00:00"
+    )
 
 class WindData(BaseModel):
     speed: float = Field(..., description="Wind speed in m/s")
@@ -44,5 +50,6 @@ class RouteResponse(BaseModel):
     search_radius_km: float = Field(..., description="Search radius used for the cycling network")
     route_geometry: List[List[Tuple[float, float]]] = Field(..., description="List of coordinate lists for drawing polylines on a map.")
     wind_conditions: WindData
+    planned_datetime: Optional[str] = Field(None, description="ISO datetime if this route was planned for a future time")
     message: str
     debug_data: Optional[DebugData] = None

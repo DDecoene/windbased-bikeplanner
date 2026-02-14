@@ -23,6 +23,7 @@ export interface RouteResponse {
 	search_radius_km: number;
 	route_geometry: [number, number][][];
 	wind_conditions: WindData;
+	planned_datetime: string | null;
 	message: string;
 	debug_data?: any;
 }
@@ -32,10 +33,16 @@ export interface RouteResponse {
  */
 export async function generateRoute(
 	start_address: string,
-	distance_km: number
+	distance_km: number,
+	planned_datetime?: string | null
 ): Promise<RouteResponse> {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), 120_000);
+
+	const body: Record<string, unknown> = { start_address, distance_km };
+	if (planned_datetime) {
+		body.planned_datetime = planned_datetime;
+	}
 
 	let response: Response;
 	try {
@@ -44,7 +51,7 @@ export async function generateRoute(
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ start_address, distance_km }),
+			body: JSON.stringify(body),
 			signal: controller.signal
 		});
 	} catch (e: any) {

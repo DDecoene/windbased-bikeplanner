@@ -2,7 +2,7 @@
 
 **RGWND** staat voor **r**·**u**·**g**·**w**·**i**·**n**·**d** — de klinkers weggelaten.
 
-Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwerk. Genereert lusroutes die tegenwind minimaliseren en rugwind maximaliseren op basis van real-time weergegevens.
+Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwerk. Genereert lusroutes die tegenwind minimaliseren en rugwind maximaliseren op basis van real-time of voorspelde windgegevens (tot 16 dagen vooruit).
 
 ## How It Works
 
@@ -49,7 +49,7 @@ pnpm dev
 - Python 3.12, FastAPI, slowapi (rate limiting)
 - Overpass API for fietsknooppunten network data
 - networkx for graph operations and routing
-- Open-Meteo for real-time wind data
+- Open-Meteo for real-time and forecasted wind data (up to 16 days ahead)
 - Nominatim for geocoding (restricted to Belgium)
 - Structured logging, Telegram ops alerts (optional)
 
@@ -57,6 +57,7 @@ pnpm dev
 - SvelteKit (Svelte 5), Tailwind CSS v4
 - Leaflet for map rendering (CARTO Voyager tiles)
 - GPX export for bike computers
+- Planned ride: pick a future date/time, route for forecasted wind (up to 16 days)
 - Dutch UI (no i18n framework, direct strings)
 - PWA — installable on mobile and desktop
 
@@ -75,6 +76,13 @@ pnpm dev
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for alerts | _(disabled)_ |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for alerts | _(disabled)_ |
 | `OVERPASS_URL` | Overpass API endpoint | `https://overpass.kumi.systems/api/interpreter` |
+
+## Roadmap
+
+- **Netherlands support** — extend beyond Belgium
+- ~~**Planned rides**~~ — ✅ done, free for all users
+- **Wind forecast overview** — show the best day to ride this week
+- **Privacy-friendly analytics** — Plausible or Umami
 
 ## Project Structure
 

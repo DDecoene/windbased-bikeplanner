@@ -2,9 +2,10 @@ import logging
 import networkx as nx
 import numpy as np
 import time
+from datetime import datetime
+from typing import List, Optional
 from . import weather
 from . import overpass
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -177,18 +178,22 @@ def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
 # --- Hoofdfunctie ---
 
 def find_wind_optimized_loop(start_address: str, distance_km: float,
+                             planned_datetime: Optional[datetime] = None,
                              tolerance: float = 0.2, debug: bool = False) -> dict:
     t_start = time.perf_counter()
     timings = {}
     stats = {}
 
-    logger.info("Route aanvraag: '%s', %.1f km", start_address, distance_km)
+    logger.info("Route aanvraag: '%s', %.1f km, planned=%s", start_address, distance_km, planned_datetime)
 
     # --- Stap 1: Geocoding & Weather (cached) ---
     coords = weather.get_coords_from_address(start_address)
     if not coords:
         raise ValueError(f"Could not geocode address: {start_address}")
-    wind_data = weather.get_wind_data(coords[0], coords[1])
+    if planned_datetime:
+        wind_data = weather.get_forecast_wind_data(coords[0], coords[1], planned_datetime)
+    else:
+        wind_data = weather.get_wind_data(coords[0], coords[1])
     if not wind_data:
         raise ConnectionError("Could not fetch wind data from Open-Meteo.")
     timings['geocoding_and_weather'] = time.perf_counter() - t_start
@@ -296,6 +301,10 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
                 actual_distance_m / 1000, len(junctions), timings['total_duration'])
 
     # --- Stap 5: Response ---
+    message = "SUCCESS: Een optimale windgebaseerde lus is gevonden."
+    if planned_datetime:
+        message = f"SUCCESS: Route geoptimaliseerd voor voorspelde wind op {planned_datetime.strftime('%d/%m/%Y %H:%M')}."
+
     response = {
         "start_address": start_address,
         "target_distance_km": distance_km,
@@ -306,7 +315,8 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
         "search_radius_km": round(radius_m / 1000, 1),
         "route_geometry": route_geometry,
         "wind_conditions": wind_data,
-        "message": "SUCCESS: Een optimale windgebaseerde lus is gevonden."
+        "planned_datetime": planned_datetime.isoformat() if planned_datetime else None,
+        "message": message
     }
 
     if debug:

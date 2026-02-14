@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,10 +61,28 @@ app.add_middleware(
 @app.post("/generate-route", response_model=RouteResponse)
 @limiter.limit("10/minute")
 async def generate_route(request: Request, route_request: RouteRequest, debug: bool = False):
+    planned_dt = route_request.planned_datetime
+    if planned_dt is not None:
+        # Validate: must be in the future and within 16-day forecast horizon
+        now_utc = datetime.now(timezone.utc)
+        dt_utc = planned_dt if planned_dt.tzinfo else planned_dt.replace(tzinfo=timezone.utc)
+        if dt_utc <= now_utc:
+            raise HTTPException(
+                status_code=422,
+                detail="Geplande datum/tijd moet in de toekomst liggen."
+            )
+        days_ahead = (dt_utc - now_utc).days
+        if days_ahead > 16:
+            raise HTTPException(
+                status_code=422,
+                detail="Geplande datum/tijd mag maximaal 16 dagen in de toekomst liggen."
+            )
+
     try:
         route_data = routing.find_wind_optimized_loop(
             start_address=route_request.start_address,
             distance_km=route_request.distance_km,
+            planned_datetime=planned_dt,
             debug=debug
         )
         return RouteResponse(**route_data)

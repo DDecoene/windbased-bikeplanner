@@ -68,9 +68,32 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 |---|------|--------|-------|
 | 18 | PWA manifest | ✅ Done | manifest.json, custom icons, installable on phones |
 | 19 | Netherlands support | ⏳ Pending | Remove `countrycodes=be` restriction, same Overpass approach works |
-| 20 | Wind forecast | ⏳ Pending | Show best day to ride this week using multi-day forecast |
+| 20 | Wind forecast overview | ⏳ Pending | Show best day to ride this week using multi-day forecast |
 | 21 | User accounts | ⏳ Pending | Route history, favorites, preferences |
 | 22 | Analytics | ⏳ Pending | Plausible or Umami (privacy-friendly, self-hostable) |
+
+## Premium Features (Paid Subscription)
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| 23 | Planned ride (future date/time) | ✅ Done | Pick a date/time up to 16 days ahead, route optimized for forecasted wind. Free for all users (no gating). |
+
+### #23 — Planned Ride: Implementation Notes
+
+**Backend**:
+- `models.py`: Optional `planned_datetime: datetime | None` in `RouteRequest`, `planned_datetime: str | None` in `RouteResponse`
+- `weather.py`: `get_forecast_wind_data()` fetches hourly forecast from Open-Meteo for a specific future hour (1h cache TTL, retries + backoff)
+- `routing.py`: `find_wind_optimized_loop()` accepts `planned_datetime`, uses forecast wind when set
+- `main.py`: Validates `planned_datetime` is future and within 16-day horizon (422 on invalid)
+
+**Frontend**:
+- Toggle switch "Geplande rit" with datetime-local picker (min: 1h from now, max: 16 days)
+- Forecast confidence indicator (color-coded: green ≤48h, cyan ≤72h, yellow ≤7d, orange >7d)
+- Planned ride banner in results with date + confidence
+- Wind label changes to "Voorspelde wind" for planned rides
+- GPX export includes planned date/time in metadata
+
+**API**: Open-Meteo free tier hourly forecasts up to 16 days — no new API or key needed. Forecast cache TTL: 1 hour.
 
 ## Current Production Gaps
 

@@ -11,6 +11,8 @@
 	// Form state
 	let startAddress: string = 'Grote Markt, Bruges, Belgium';
 	let distanceKm: number = 45;
+	let plannedDatetime: string = '';
+	let usePlannedRide: boolean = false;
 
 	// Application state
 	let isLoading: boolean = false;
@@ -34,12 +36,16 @@
 		const now = new Date().toISOString();
 		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
 		const windDir = degreesToCardinal(data.wind_conditions.direction);
+		const windLabel = data.planned_datetime ? 'Voorspelde wind' : 'Wind';
+		const plannedNote = data.planned_datetime
+			? ` Gepland: ${new Date(data.planned_datetime).toLocaleString('nl-BE')}.`
+			: '';
 
 		let gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="RGWND" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(data.start_address)} — ${data.actual_distance_km} km</name>
-    <desc>Wind: ${windKmh} km/h ${windDir}. Knooppunten: ${data.junctions.join(' → ')}</desc>
+    <desc>${windLabel}: ${windKmh} km/h ${windDir}. Knooppunten: ${data.junctions.join(' → ')}${plannedNote}</desc>
     <time>${now}</time>
   </metadata>
 `;
@@ -87,6 +93,31 @@
 
 	function windArrowRotation(directionDeg: number): number {
 		return (directionDeg + 180) % 360;
+	}
+
+	// --- Planned ride helpers ---
+
+	function getMinDatetime(): string {
+		const now = new Date();
+		now.setMinutes(now.getMinutes() + 60);
+		return now.toISOString().slice(0, 16);
+	}
+
+	function getMaxDatetime(): string {
+		const max = new Date();
+		max.setDate(max.getDate() + 16);
+		return max.toISOString().slice(0, 16);
+	}
+
+	function getForecastConfidence(dt: string): { label: string; color: string } | null {
+		if (!dt) return null;
+		const target = new Date(dt);
+		const now = new Date();
+		const hoursAhead = (target.getTime() - now.getTime()) / (1000 * 60 * 60);
+		if (hoursAhead <= 48) return { label: 'Hoge betrouwbaarheid', color: 'text-green-400' };
+		if (hoursAhead <= 72) return { label: 'Goede betrouwbaarheid', color: 'text-cyan-400' };
+		if (hoursAhead <= 168) return { label: 'Matige betrouwbaarheid', color: 'text-yellow-400' };
+		return { label: 'Lage betrouwbaarheid', color: 'text-orange-400' };
 	}
 
 	// --- Loading messages ---
@@ -155,7 +186,8 @@
 		startLoadingMessages();
 
 		try {
-			const data = await generateRoute(startAddress, distanceKm);
+			const dt = usePlannedRide && plannedDatetime ? plannedDatetime : null;
+			const data = await generateRoute(startAddress, distanceKm, dt);
 			routeData = data;
 			drawRoute(data);
 		} catch (e: any) {
@@ -338,6 +370,59 @@
 				/>
 			</div>
 		</div>
+		<!-- Planned ride toggle -->
+		<div class="mb-5 rounded-lg border border-gray-700 bg-gray-800/40 p-4">
+			<div class="flex items-center justify-between">
+				<label for="planned-toggle" class="text-sm font-medium text-gray-400">
+					Geplande rit
+				</label>
+				<button
+					type="button"
+					id="planned-toggle"
+					role="switch"
+					aria-checked={usePlannedRide}
+					aria-label="Geplande rit aan/uit"
+					on:click={() => {
+						usePlannedRide = !usePlannedRide;
+					}}
+					class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950
+						{usePlannedRide ? 'bg-cyan-500' : 'bg-gray-600'}"
+				>
+					<span
+						class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out
+							{usePlannedRide ? 'translate-x-5' : 'translate-x-0'}"
+					></span>
+				</button>
+			</div>
+			{#if usePlannedRide}
+				<div class="mt-3">
+					<label for="planned-dt" class="mb-1.5 block text-sm font-medium text-gray-400">
+						Datum & tijd
+					</label>
+					<input
+						type="datetime-local"
+						id="planned-dt"
+						bind:value={plannedDatetime}
+						min={getMinDatetime()}
+						max={getMaxDatetime()}
+						class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+						required
+					/>
+					{#if plannedDatetime}
+						{@const confidence = getForecastConfidence(plannedDatetime)}
+						{#if confidence}
+							<p class="mt-1.5 text-xs {confidence.color}">
+								<svg xmlns="http://www.w3.org/2000/svg" class="mr-1 inline h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+								Windvoorspelling: {confidence.label}
+							</p>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+		</div>
+
 		<button
 			type="submit"
 			class="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:from-cyan-400 hover:to-blue-500 hover:shadow-cyan-500/25 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
@@ -367,6 +452,26 @@
 		{/if}
 
 		{#if routeData}
+			<!-- Planned ride banner -->
+			{#if routeData.planned_datetime}
+				{@const confidence = getForecastConfidence(routeData.planned_datetime)}
+				<div class="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-4 py-2.5">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+					</svg>
+					<div>
+						<p class="text-sm font-medium text-cyan-300">
+							Gepland: {new Date(routeData.planned_datetime).toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+						</p>
+						{#if confidence}
+							<p class="text-xs {confidence.color}">
+								Windvoorspelling: {confidence.label}
+							</p>
+						{/if}
+					</div>
+				</div>
+			{/if}
+
 			<!-- Stats -->
 			<div class="grid shrink-0 grid-cols-3 gap-2">
 				<div
@@ -407,7 +512,7 @@
 			>
 				<div class="text-center">
 					<p class="text-[10px] font-medium uppercase tracking-wider text-gray-500">
-						Windsnelheid
+						{routeData.planned_datetime ? 'Voorspelde wind' : 'Windsnelheid'}
 					</p>
 					<p class="text-sm font-semibold text-gray-200">
 						{windSpeedKmh(routeData.wind_conditions.speed)}
@@ -471,7 +576,7 @@
 		<div
 			bind:this={mapContainer}
 			class="aspect-square w-full overflow-hidden rounded-lg ring-1 ring-gray-800"
-		/>
+		></div>
 	</div>
 </main>
 
