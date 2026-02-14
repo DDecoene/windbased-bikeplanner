@@ -55,6 +55,8 @@ _default_origins = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://localhost",
+    "https://127.0.0.1",
 ]
 _env_origins = os.environ.get("CORS_ORIGINS")
 origins = [o.strip() for o in _env_origins.split(",") if o.strip()] if _env_origins else _default_origins

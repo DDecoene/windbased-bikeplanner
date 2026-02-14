@@ -30,7 +30,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 | # | What | Status | Notes |
 |---|------|--------|-------|
 | 1 | Environment config | ✅ Done | `CORS_ORIGINS` env var, falls back to localhost defaults |
-| 2 | Caddy reverse proxy | ⏳ Pending | Will add when domain is ready |
+| 2 | Caddy reverse proxy | ✅ Done | Local dev: mkcert HTTPS certs + Caddyfile. Production: auto-SSL via Let's Encrypt |
 | 3 | Runtime API URL | ✅ Done | Falls back to `/api` for future proxy, `VITE_API_URL` overrides |
 | 4 | Health endpoint | ✅ Done | `GET /health` returns `{"status": "ok"}` |
 | 5 | Structured logging | ✅ Done | `logging` module in all backend modules, structured format |
@@ -111,7 +111,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 ### Remaining
 
-- **Caddy reverse proxy** — waiting for domain registration
+- ~~Caddy reverse proxy~~ — ✅ done for local dev (mkcert + Caddyfile), production needs domain + Let's Encrypt
 - **In-memory caches** — lost on restart, unbounded growth, not thread-safe across workers
 - **Sync internals** — async endpoint but all HTTP calls are synchronous (blocks thread pool)
 - ~~No PWA manifest~~ — installable via manifest.json + custom icons
@@ -130,8 +130,8 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [ ] Register domain (rgwnd.app or similar)
 - [ ] Provision Hetzner CX22 VPS
 - [ ] Install Docker + Docker Compose on VPS
-- [ ] Add Caddy service to docker-compose.yml
-- [ ] Configure Caddy: domain → frontend, domain/api → backend, auto-SSL
+- [x] Add Caddy service to docker-compose.yml (local dev with mkcert certs)
+- [ ] Configure Caddy: domain → frontend, domain/api → backend, auto-SSL (production)
 - [ ] Point DNS to Hetzner VPS
 - [ ] Verify SSL works
 - [ ] Test full flow on production domain

@@ -19,12 +19,17 @@ Free account required to generate routes (Clerk authentication — Google or ema
 ## Running with Docker
 
 ```bash
+# First time: generate local HTTPS certs (requires mkcert)
+mkcert -install
+mkdir -p certs
+mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1
+
+# Start all services
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Swagger docs: http://localhost:8000/docs
+- App (HTTPS): https://localhost
+- Swagger docs: http://localhost:8000/docs (internal, not exposed via Caddy)
 
 ## Running Locally
 
@@ -64,7 +69,8 @@ pnpm dev
 - PWA — installable on mobile and desktop
 
 **Infrastructure**
-- Docker Compose with non-root containers and resource limits
+- Docker Compose with Caddy HTTPS reverse proxy (mkcert for local dev)
+- Non-root containers with resource limits
 - Watchdog health monitor with Telegram alerting
 - Overpass disk cache with auto-cleanup (1 week TTL, 500MB cap)
 - Retry with exponential backoff on all external API calls

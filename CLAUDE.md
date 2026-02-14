@@ -10,11 +10,11 @@ Wind-optimized cycling loop route planner for Belgium. Uses the Belgian fietskno
 
 ### Docker (preferred)
 ```bash
-docker compose up --build        # both services
+docker compose up --build        # all services
 docker compose up --build backend -d  # rebuild backend only
 docker compose up --build frontend -d # rebuild frontend only
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000/docs
+# App (HTTPS via Caddy): https://localhost
+# Backend API (internal): http://localhost:8000/docs
 ```
 
 ### Backend (Python/FastAPI) — local
@@ -39,7 +39,7 @@ pnpm lint            # prettier --check
 ## Architecture
 
 **Backend (`app/`)**
-- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required). CORS configurable via `CORS_ORIGINS` env var (falls back to localhost:5173 and :3000). Rate-limited to 10 req/min per IP via slowapi. Structured logging configured here.
+- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required). CORS configurable via `CORS_ORIGINS` env var (falls back to localhost defaults including HTTPS). Rate-limited to 10 req/min per IP via slowapi. Structured logging configured here.
 - `routing.py` — Core algorithm: geocode → fetch wind → build full RCN graph → build condensed knooppunt graph → DFS loop finder with distance-budget pruning → wind-effort scoring → expand to full geometry.
 - `overpass.py` — Overpass API client: fetches RCN route relations + ways + knooppunt nodes, builds a full networkx MultiDiGraph, and a condensed knooppunt-only Graph (early-stop Dijkstra). Disk-cached (1 week TTL, `overpass_cache/`, auto-cleanup: expired files + 500MB cap). Retry with exponential backoff (2 retries) on timeout/connection/429/503/504. Overpass URL configurable via `OVERPASS_URL` env var (default: kumi.systems mirror).
 - `weather.py` — Nominatim geocoding (24h TTL cache), Open-Meteo real-time wind (10min TTL cache), and `get_forecast_wind_data()` for planned rides (1h TTL cache, hourly forecast up to 16 days). All with retry (2 retries, exponential backoff).
@@ -64,8 +64,10 @@ pnpm lint            # prettier --check
 
 **Docker**
 - `Dockerfile` — Python 3.12-slim backend, fixes volume permissions at startup, runs as `appuser`.
-- `ui/Dockerfile` — Node 22-slim multi-stage frontend build, non-root `appuser`.
-- `docker-compose.yml` — backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volume for overpass_cache.
+- `ui/Dockerfile` — Node 22-slim multi-stage frontend build, non-root `appuser`. `VITE_API_URL` defaults to `/api`.
+- `Caddyfile` — HTTPS reverse proxy: `/api/*` → strip prefix → backend:8000, everything else → frontend:3000. Uses mkcert certificates for local dev.
+- `docker-compose.yml` — caddy:443 (128MB/0.25CPU), backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volume for overpass_cache. Backend/frontend ports not exposed directly (Caddy proxies).
+- `certs/` — mkcert-generated localhost TLS certificates (gitignored). Generate with `mkcert -install && mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1`.
 - `watchdog.sh` — Infrastructure health monitor (checks backend `/health` + frontend every 60s, alerts on status change).
 - `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, optionally `CORS_ORIGINS`, `OVERPASS_URL`.
 

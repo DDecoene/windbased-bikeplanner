@@ -71,7 +71,7 @@ export async function generateRoute(
 		clearTimeout(timeout);
 	}
 
-	if (response.status === 401) {
+	if (response.status === 401 || response.status === 403) {
 		throw new Error('Je bent niet ingelogd. Log in en probeer het opnieuw.');
 	}
 
