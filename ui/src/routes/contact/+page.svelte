@@ -8,7 +8,7 @@
 	const faqs = [
 		{
 			q: 'Wat is RGWND?',
-			a: 'RGWND is een windgeoptimaliseerde fietsrouteplanner voor België. Het genereert lusroutes via het fietsknooppuntennetwerk die tegenwind minimaliseren en rugwind maximaliseren op basis van real-time weergegevens.'
+			a: 'RGWND staat voor rugwind — de klinkers weggelaten. Het is een windgeoptimaliseerde fietsrouteplanner voor België die lusroutes genereert via het fietsknooppuntennetwerk. De routes minimaliseren tegenwind en maximaliseren rugwind op basis van real-time weergegevens.'
 		},
 		{
 			q: 'Hoe werkt de windoptimalisatie?',

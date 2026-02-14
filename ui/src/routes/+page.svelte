@@ -290,6 +290,9 @@
 		>
 			RGWND
 		</h1>
+		<p class="mt-0.5 text-lg tracking-[0.3em] font-light">
+			<span class="text-gray-600">r</span><span class="text-cyan-400">u</span><span class="text-gray-600">gw</span><span class="text-cyan-400">i</span><span class="text-gray-600">nd</span>
+		</p>
 		<p class="mt-1 text-sm text-gray-500">Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk</p>
 	</header>
 

@@ -1,5 +1,7 @@
 # RGWND
 
+**RGWND** staat voor **r**·**u**·**g**·**w**·**i**·**n**·**d** — de klinkers weggelaten.
+
 Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwerk. Genereert lusroutes die tegenwind minimaliseren en rugwind maximaliseren op basis van real-time weergegevens.
 
 ## How It Works
