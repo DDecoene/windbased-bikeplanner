@@ -13,6 +13,12 @@ export interface JunctionCoord {
 	lon: number;
 }
 
+export interface UsageInfo {
+	routes_used: number;
+	routes_limit: number;
+	is_premium: boolean;
+}
+
 export interface RouteResponse {
 	start_address: string;
 	target_distance_km: number;
@@ -71,7 +77,7 @@ export async function generateRoute(
 		clearTimeout(timeout);
 	}
 
-	if (response.status === 401 || response.status === 403) {
+	if (response.status === 401) {
 		throw new Error('Je bent niet ingelogd. Log in en probeer het opnieuw.');
 	}
 
@@ -81,4 +87,17 @@ export async function generateRoute(
 	}
 
 	return response.json() as Promise<RouteResponse>;
+}
+
+/**
+ * Haalt het huidige verbruik van de gebruiker op.
+ */
+export async function fetchUsage(authToken: string): Promise<UsageInfo> {
+	const response = await fetch(`${API_URL}/usage`, {
+		headers: { Authorization: `Bearer ${authToken}` }
+	});
+	if (!response.ok) {
+		throw new Error('Kan gebruiksinformatie niet ophalen.');
+	}
+	return response.json() as Promise<UsageInfo>;
 }

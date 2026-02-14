@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { RouteResponse } from '$lib/api';
-	import { generateRoute } from '$lib/api';
+	import type { RouteResponse, UsageInfo } from '$lib/api';
+	import { generateRoute, fetchUsage } from '$lib/api';
 	import 'leaflet/dist/leaflet.css';
 	import { useClerkContext } from 'svelte-clerk';
 	import { goto } from '$app/navigation';
@@ -23,6 +23,10 @@
 	let routeData: RouteResponse | null = null;
 	let loadingMessage: string = '';
 	let loadingInterval: ReturnType<typeof setInterval> | null = null;
+
+	// Usage tracking
+	let usageInfo: UsageInfo | null = null;
+	let usageLimitReached: boolean = false;
 
 	// Map layers
 	let mapContainer: HTMLDivElement;
@@ -168,10 +172,26 @@
 
 	// --- Map ---
 
+	async function loadUsage(): Promise<void> {
+		if (!ctx.auth.userId) return;
+		try {
+			const token = await ctx.session?.getToken();
+			if (token) {
+				usageInfo = await fetchUsage(token);
+				usageLimitReached = !usageInfo.is_premium && usageInfo.routes_used >= usageInfo.routes_limit;
+			}
+		} catch (e) {
+			// Stil falen — usage ophalen mag niet de app blokkeren
+		}
+	}
+
 	onMount(async () => {
 		if (typeof window !== 'undefined') {
 			L = await import('leaflet');
 			initializeMap();
+
+			// Laad usage info als ingelogd
+			setTimeout(() => loadUsage(), 500);
 
 			// Check for pending route after sign-in redirect
 			const pendingRoute = sessionStorage.getItem('rgwnd_pending_route');
@@ -248,6 +268,8 @@
 			const data = await generateRoute(startAddress, distanceKm, dt, token);
 			routeData = data;
 			drawRoute(data);
+			// Verbruik herladen na succesvolle route
+			await loadUsage();
 		} catch (e: any) {
 			errorMessage = e.message;
 		} finally {
@@ -495,7 +517,7 @@
 		<button
 			type="submit"
 			class="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:from-cyan-400 hover:to-blue-500 hover:shadow-cyan-500/25 focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
-			disabled={isLoading}
+			disabled={isLoading || usageLimitReached}
 		>
 			{#if isLoading}
 				<span class="animate-pulse">{loadingMessage}</span>
@@ -503,6 +525,30 @@
 				Genereer Route
 			{/if}
 		</button>
+
+		<!-- Usage counter -->
+		{#if usageInfo}
+			{#if usageInfo.is_premium}
+				<p class="mt-2 text-center text-xs text-cyan-400">Premium — onbeperkt</p>
+			{:else}
+				<p class="mt-2 text-center text-xs text-gray-500">
+					{usageInfo.routes_used}/{usageInfo.routes_limit} gratis routes deze week
+				</p>
+			{/if}
+		{/if}
+
+		<!-- Upgrade prompt bij limiet -->
+		{#if usageLimitReached}
+			<div class="mt-3 rounded-lg border border-cyan-500/30 bg-cyan-950/20 p-4 text-center">
+				<p class="text-sm font-medium text-cyan-300">
+					Je hebt alle gratis routes van deze week gebruikt
+				</p>
+				<p class="mt-1 text-xs text-gray-400">
+					Upgrade naar Premium voor onbeperkte routes en meer features.
+				</p>
+				<p class="mt-2 text-xs text-gray-500">Nieuwe week = nieuwe routes (elke maandag)</p>
+			</div>
+		{/if}
 	</form>
 
 	<!-- Results + Map -->

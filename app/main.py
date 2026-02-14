@@ -12,9 +12,14 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
 
-from .models import RouteRequest, RouteResponse
+from clerk_backend_api import Clerk
+
+from .models import RouteRequest, RouteResponse, UsageResponse
 from . import routing
 from .notify import send_alert
+
+# --- Gratis limiet ---
+FREE_ROUTES_PER_WEEK = 3
 
 # --- Logging ---
 logging.basicConfig(
@@ -30,6 +35,10 @@ _clerk_jwks_url = os.environ.get(
 )
 clerk_config = ClerkConfig(jwks_url=_clerk_jwks_url)
 clerk_auth = ClerkHTTPBearer(config=clerk_config)
+
+# --- Clerk Backend API client (voor metadata) ---
+_clerk_secret = os.environ.get("CLERK_SECRET_KEY", "")
+clerk_client = Clerk(bearer_auth=_clerk_secret) if _clerk_secret else None
 
 # --- Rate limiter ---
 limiter = Limiter(key_func=get_remote_address)
@@ -70,6 +79,72 @@ app.add_middleware(
 )
 
 
+# --- Usage tracking helpers ---
+
+def _current_iso_week() -> str:
+    """Huidige ISO-week, bv. '2026-W07'."""
+    return datetime.now(timezone.utc).strftime("%G-W%V")
+
+
+def _is_premium(credentials) -> bool:
+    """Check premium status via JWT public_metadata claim."""
+    public_meta = credentials.decoded.get("public_metadata", {})
+    if isinstance(public_meta, dict):
+        return public_meta.get("premium", False) is True
+    return False
+
+
+def _get_usage(user_id: str) -> dict:
+    """Haal usage op uit Clerk privateMetadata. Reset als week veranderd is.
+    Bij fouten: blokkeer toegang (count = limiet) om misbruik te voorkomen."""
+    if not clerk_client:
+        logger.warning("Clerk client niet geconfigureerd — toegang geblokkeerd")
+        return {"week": _current_iso_week(), "count": FREE_ROUTES_PER_WEEK}
+    try:
+        user = clerk_client.users.get(user_id=user_id)
+        meta = user.private_metadata or {}
+        usage = meta.get("usage", {})
+        week = _current_iso_week()
+        if usage.get("week") != week:
+            return {"week": week, "count": 0}
+        return {"week": week, "count": usage.get("count", 0)}
+    except Exception as e:
+        logger.error("Fout bij ophalen usage voor %s: %s — toegang geblokkeerd", user_id, e)
+        send_alert(f"Clerk usage ophalen mislukt voor {user_id}: {e}")
+        return {"week": _current_iso_week(), "count": FREE_ROUTES_PER_WEEK}
+
+
+def _increment_usage(user_id: str, current_usage: dict) -> None:
+    """Verhoog usage count in Clerk privateMetadata."""
+    if not clerk_client:
+        return
+    try:
+        new_usage = {"week": current_usage["week"], "count": current_usage["count"] + 1}
+        clerk_client.users.update(user_id=user_id, private_metadata={"usage": new_usage})
+    except Exception as e:
+        logger.error("Fout bij updaten usage voor %s: %s", user_id, e)
+        send_alert(f"Clerk usage updaten mislukt voor {user_id}: {e}")
+
+
+@app.get("/usage", response_model=UsageResponse)
+@limiter.limit("30/minute")
+async def get_usage(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(clerk_auth),
+):
+    """Haal het huidige verbruik van de gebruiker op."""
+    user_id = credentials.decoded.get("sub")
+    premium = _is_premium(credentials)
+    if premium:
+        return UsageResponse(routes_used=0, routes_limit=0, is_premium=True)
+    usage = _get_usage(user_id)
+    return UsageResponse(
+        routes_used=usage["count"],
+        routes_limit=FREE_ROUTES_PER_WEEK,
+        is_premium=False,
+    )
+
+
 @app.post("/generate-route", response_model=RouteResponse)
 @limiter.limit("10/minute")
 async def generate_route(
@@ -80,6 +155,17 @@ async def generate_route(
 ):
     user_id = credentials.decoded.get("sub")
     logger.info("Route request from user %s: %s, %s km", user_id, route_request.start_address, route_request.distance_km)
+
+    # --- Usage limiet check ---
+    premium = _is_premium(credentials)
+    if not premium:
+        usage = _get_usage(user_id)
+        if usage["count"] >= FREE_ROUTES_PER_WEEK:
+            raise HTTPException(
+                status_code=403,
+                detail="Weekelijks limiet bereikt (3/3). Upgrade naar Premium voor onbeperkte routes.",
+            )
+
     planned_dt = route_request.planned_datetime
     if planned_dt is not None:
         # Validate: must be in the future and within 16-day forecast horizon
@@ -104,6 +190,9 @@ async def generate_route(
             planned_datetime=planned_dt,
             debug=debug
         )
+        # Verhoog usage na succesvolle route generatie
+        if not premium:
+            _increment_usage(user_id, usage)
         return RouteResponse(**route_data)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

@@ -39,11 +39,11 @@ pnpm lint            # prettier --check
 ## Architecture
 
 **Backend (`app/`)**
-- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required). CORS configurable via `CORS_ORIGINS` env var (falls back to localhost defaults including HTTPS). Rate-limited to 10 req/min per IP via slowapi. Structured logging configured here.
+- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required) and `GET /usage` (usage tracking). Free tier: 3 routes/week via Clerk privateMetadata, premium via JWT public_metadata claim. Fail-closed on Clerk API errors (blocks + Telegram alert). CORS configurable via `CORS_ORIGINS` env var. Rate-limited to 10 req/min per IP via slowapi. Structured logging configured here.
 - `routing.py` — Core algorithm: geocode → fetch wind → build full RCN graph → build condensed knooppunt graph → DFS loop finder with distance-budget pruning → wind-effort scoring → expand to full geometry.
 - `overpass.py` — Overpass API client: fetches RCN route relations + ways + knooppunt nodes, builds a full networkx MultiDiGraph, and a condensed knooppunt-only Graph (early-stop Dijkstra). Disk-cached (1 week TTL, `overpass_cache/`, auto-cleanup: expired files + 500MB cap). Retry with exponential backoff (2 retries) on timeout/connection/429/503/504. Overpass URL configurable via `OVERPASS_URL` env var (default: kumi.systems mirror).
 - `weather.py` — Nominatim geocoding (24h TTL cache), Open-Meteo real-time wind (10min TTL cache), and `get_forecast_wind_data()` for planned rides (1h TTL cache, hourly forecast up to 16 days). All with retry (2 retries, exponential backoff).
-- `models.py` — Pydantic models including JunctionCoord, start_coords, search_radius_km. `start_address` max 200 chars. Optional `planned_datetime` for future ride planning.
+- `models.py` — Pydantic models including JunctionCoord, start_coords, search_radius_km, UsageResponse. `start_address` max 200 chars. Optional `planned_datetime` for future ride planning.
 - `notify.py` — Telegram alerting (Bot API). Silent no-op if `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` env vars not set. 5-minute deduplication.
 
 **Frontend (`ui/`)**
@@ -56,10 +56,10 @@ pnpm lint            # prettier --check
 - `src/lib/AuthHeader.svelte` — Fixed top-right auth UI (avatar when signed in, "Inloggen" link when signed out).
 - `src/routes/sign-in/[...rest]/+page.svelte` — Clerk SignIn component (dark themed).
 - `src/routes/sign-up/[...rest]/+page.svelte` — Clerk SignUp component (dark themed).
-- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. Auth check on submit with sessionStorage form persistence. Footer with Privacy + Contact links.
+- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. Auth check on submit with sessionStorage form persistence. Usage counter below submit button (X/3 gratis routes deze week), disabled button + cyan upgrade prompt when limit reached. Footer with Privacy + Contact links.
 - `src/routes/privacy/+page.svelte` — Privacy policy (Clerk auth disclosure, third-party API disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
-- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
+- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token, `fetchUsage()` for usage tracking. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy).
 - `src/app.html` — Static OG/Twitter meta tags (Dutch, `og:locale=nl_BE`). PWA manifest + theme-color.
 
 **Docker**
@@ -78,6 +78,7 @@ pnpm lint            # prettier --check
 - Geocoding is restricted to Belgium (`countrycodes=be`).
 - No database — RCN network is fetched on the fly via Overpass API (cached to disk for 1 week).
 - **Clerk authentication** required for route generation. Env vars: `PUBLIC_CLERK_PUBLISHABLE_KEY` (frontend), `CLERK_SECRET_KEY` (backend). Backend verifies JWT via `fastapi-clerk-auth` (JWKS endpoint). Sign-in methods: Google OAuth + email/password.
+- **Free tier**: 3 routes/week per user. Usage tracked in Clerk `privateMetadata` (ISO week reset). Premium users (`publicMetadata.premium = true`) get unlimited routes. Backend uses `clerk-backend-api` SDK. Fail-closed: Clerk API errors block access + trigger Telegram alert.
 - Telegram notifications are optional — configured via `.env` (see `.env.example`).
 - Prettier config: tabs, single quotes, no trailing commas, 100 char width.
 

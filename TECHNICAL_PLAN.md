@@ -77,6 +77,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 | # | What | Status | Notes |
 |---|------|--------|-------|
 | 23 | Planned ride (future date/time) | ✅ Done | Pick a date/time up to 16 days ahead, route optimized for forecasted wind. Free for all users (no gating). |
+| 24 | Free tier usage tracking | ✅ Done | 3 routes/week for free users, unlimited for premium. Usage stored in Clerk privateMetadata, premium check via JWT public_metadata claim. |
 
 ### #23 — Planned Ride: Implementation Notes
 
@@ -94,6 +95,23 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - GPX export includes planned date/time in metadata
 
 **API**: Open-Meteo free tier hourly forecasts up to 16 days — no new API or key needed. Forecast cache TTL: 1 hour.
+
+### #24 — Free Tier Usage Tracking: Implementation Notes
+
+**Backend**:
+- `clerk-backend-api` Python SDK for reading/writing Clerk user metadata
+- `privateMetadata.usage`: `{"week": "2026-W07", "count": 2}` — ISO week format, auto-resets when week changes
+- `publicMetadata.premium`: `true` for premium users (set via Clerk dashboard, exposed in JWT via custom claims template)
+- `_get_usage()` / `_increment_usage()` helpers with fail-closed error handling (blocks on Clerk API failure + Telegram alert)
+- `GET /usage` endpoint returns `{routes_used, routes_limit, is_premium}`
+- Usage check + 403 in `/generate-route` as server-side safety net
+- Usage incremented only after successful route generation
+
+**Frontend**:
+- `fetchUsage()` in `api.ts` — called on mount + after each route generation
+- Counter below submit button: "1/3 gratis routes deze week" or "Premium — onbeperkt"
+- Button disabled when limit reached
+- Cyan-styled upgrade prompt (not red error) with "Nieuwe week = nieuwe routes (elke maandag)" message
 
 ## Current Production Gaps
 
@@ -144,3 +162,5 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Add footer with Privacy + Contact links
 - [x] Translate all frontend text to Dutch
 - [x] Add Clerk authentication (sign-in/sign-up pages, backend JWT verification, auth-gated route generation)
+- [x] Add free tier usage tracking (3 routes/week, Clerk metadata, usage counter in UI)
+- [ ] Configure Clerk JWT custom claims template to include `public_metadata` (needed for premium check)

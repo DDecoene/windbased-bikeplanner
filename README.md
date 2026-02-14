@@ -14,7 +14,7 @@ Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwer
 6. **Return** the route as a polyline with junction waypoints
 7. **Export** as GPX for bike computers (Garmin, Wahoo, etc.)
 
-Free account required to generate routes (Clerk authentication — Google or email sign-up).
+Free account required to generate routes (Clerk authentication — Google or email sign-up). Free tier: 3 routes per week. Premium: unlimited.
 
 ## Running with Docker
 
@@ -52,7 +52,7 @@ pnpm dev
 
 **Backend**
 - Python 3.12, FastAPI, slowapi (rate limiting)
-- Clerk JWT authentication (`fastapi-clerk-auth`)
+- Clerk JWT authentication (`fastapi-clerk-auth`) + usage tracking (`clerk-backend-api`)
 - Overpass API for fietsknooppunten network data
 - networkx for graph operations and routing
 - Open-Meteo for real-time and forecasted wind data (up to 16 days ahead)
@@ -92,6 +92,8 @@ pnpm dev
 - **Netherlands support** — extend beyond Belgium
 - ~~**Planned rides**~~ — ✅ done, free for all users
 - ~~**User accounts**~~ — ✅ done, Clerk auth (Google + email)
+- ~~**Freemium gate**~~ — ✅ done, 3 routes/week free, usage counter in UI
+- **Premium subscription** — payment flow (Stripe)
 - **Wind forecast overview** — show the best day to ride this week
 - **Privacy-friendly analytics** — Plausible or Umami
 
@@ -99,7 +101,7 @@ pnpm dev
 
 ```
 app/
-  main.py        — FastAPI app, CORS, rate limiting, structured logging
+  main.py        — FastAPI app, CORS, rate limiting, usage tracking, structured logging
   routing.py     — Wind-weighted loop finding on condensed knooppunt graph
   overpass.py    — Overpass API client, networkx graph builder, disk cache, retry logic
   weather.py     — Nominatim geocoding + Open-Meteo wind data, retry logic

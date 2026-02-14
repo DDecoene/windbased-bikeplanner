@@ -2,6 +2,12 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import List, Tuple, Optional, Dict
 
+class UsageResponse(BaseModel):
+    routes_used: int = Field(..., description="Aantal routes gebruikt deze week")
+    routes_limit: int = Field(..., description="Maximum routes per week (0 = onbeperkt)")
+    is_premium: bool = Field(..., description="Heeft de gebruiker een premium abonnement")
+
+
 class RouteRequest(BaseModel):
     start_address: str = Field(..., max_length=200, example="Grote Markt, Bruges, Belgium")
     distance_km: float = Field(..., gt=5, le=200, example=45.5)

@@ -25,8 +25,8 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 ## Revenue Models
 
 ### 1. Freemium Subscription (primary)
-- **Free tier**: 2-3 routes/week, basic wind optimization, limited distance range
-- **Premium** (€14.99–29.99/yr): Unlimited routes, advanced preferences (headwind avoidance intensity, scenic preferences), route history, GPX export, offline maps
+- **Free tier**: 3 routes/week (tracked via Clerk metadata, ISO week reset), all features accessible
+- **Premium** (€14.99–29.99/yr): Unlimited routes, advanced preferences (headwind avoidance intensity, scenic preferences), route history
 - Price point intentionally below Strava/Komoot to capture value-conscious cyclists
 
 ### 2. B2B / API Licensing
@@ -56,7 +56,7 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 - Mobile-responsive PWA (no app store needed initially)
 - GPX export for Garmin/Wahoo devices
 - Social features: share routes, "ride this route" links
-- Introduce freemium gate
+- ~~Introduce freemium gate~~ — ✅ done (3 routes/week free, usage counter in UI)
 
 ### Phase 3 — Monetize (9-18 months)
 - Premium subscription launch
