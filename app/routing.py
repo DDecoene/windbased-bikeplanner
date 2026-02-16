@@ -21,17 +21,16 @@ def calculate_effort_cost(length: float, bearing: float, wind_speed: float, wind
     cost = length * (1 + (wind_speed / 10) * wind_factor)
     return max(cost, length * 0.2)
 
-def add_wind_effort_weight(G: nx.DiGraph, wind_speed_ms: float, wind_direction_deg: float) -> nx.DiGraph:
-    G_effort = G.copy()
-    for u, v, key, data in G_effort.edges(data=True, keys=True):
+def add_wind_effort_weight(G: nx.DiGraph, wind_speed_ms: float, wind_direction_deg: float) -> None:
+    """Voeg effort-gewicht toe aan alle edges in de graph (in-place, geen kopie)."""
+    for u, v, key, data in G.edges(data=True, keys=True):
         length = data.get('length', 0.0)
         bearing = data.get('bearing', None)
         if bearing is None:
             cost = length
         else:
             cost = calculate_effort_cost(length, bearing, wind_speed_ms, wind_direction_deg)
-        G_effort.edges[u, v, key]['effort'] = float(cost)
-    return G_effort
+        G.edges[u, v, key]['effort'] = float(cost)
 
 def _sum_path_attr_multidigraph(G: nx.MultiDiGraph, path: List[int], attr: str) -> float:
     """
@@ -101,37 +100,60 @@ def _expand_kp_loop(kp_loop: List[int], K: nx.Graph) -> List[int]:
 
 
 def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
-                          tolerance: float, max_depth: int = 15):
+                          tolerance: float, max_depth: int = 15,
+                          time_limit: float = 30.0):
     """
     DFS-gebaseerde loop-zoeker op de knooppuntgraph.
-    Vindt alle eenvoudige cycli vanuit start_kp binnen de afstandstolerantie.
+    Vindt eenvoudige cycli vanuit start_kp binnen de afstandstolerantie.
+    Stopt na time_limit seconden en retourneert wat gevonden is.
     """
     min_dist = target_m * (1 - tolerance)
     max_dist = target_m * (1 + tolerance)
     candidates = []
+    t_start = time.perf_counter()
 
-    # Stack: (huidige node, bezocht pad, geaccumuleerde afstand)
-    stack = [(start_kp, [start_kp], 0.0)]
+    # Pas dieptelimiet aan voor dichte grafen (voorkom combinatorische explosie)
+    avg_degree = 2 * K.number_of_edges() / max(K.number_of_nodes(), 1)
+    if avg_degree > 10:
+        max_depth = min(max_depth, 10)
+    elif avg_degree > 6:
+        max_depth = min(max_depth, 12)
 
+    # Stack: (huidige node, bezochte set, bezocht pad, geaccumuleerde afstand)
+    stack = [(start_kp, frozenset([start_kp]), [start_kp], 0.0)]
+
+    iterations = 0
     while stack:
-        node, visited, dist = stack.pop()
+        iterations += 1
+        # Tijdslimiet check (elke 10000 iteraties om overhead te beperken)
+        if iterations % 10000 == 0 and time.perf_counter() - t_start > time_limit:
+            logger.info("DFS tijdslimiet bereikt na %.1fs, %d kandidaten, %d iteraties",
+                        time.perf_counter() - t_start, len(candidates), iterations)
+            break
+
+        node, visited_set, visited_path, dist = stack.pop()
 
         for neighbor in K.neighbors(node):
             edge_len = K.edges[node, neighbor]["length"]
             new_dist = dist + edge_len
 
             # Terug naar start? Check of het een geldige loop is
-            if neighbor == start_kp and len(visited) >= 3:
+            if neighbor == start_kp and len(visited_path) >= 3:
                 if min_dist <= new_dist <= max_dist:
-                    candidates.append((visited + [start_kp], new_dist))
+                    candidates.append((visited_path + [start_kp], new_dist))
+                    # Stop vroeg als we genoeg kandidaten hebben
+                    if len(candidates) >= 500:
+                        logger.info("DFS gestopt bij 500 kandidaten na %.1fs",
+                                    time.perf_counter() - t_start)
+                        return candidates
                 continue
 
             # Geen revisits (eenvoudige cyclus)
-            if neighbor in visited:
+            if neighbor in visited_set:
                 continue
 
             # Dieptelimiet
-            if len(visited) >= max_depth:
+            if len(visited_path) >= max_depth:
                 continue
 
             # Pruning: al te ver → skip
@@ -149,7 +171,7 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
             if new_dist + dist_back * 0.7 > max_dist:
                 continue
 
-            stack.append((neighbor, visited + [neighbor], new_dist))
+            stack.append((neighbor, visited_set | {neighbor}, visited_path + [neighbor], new_dist))
 
     return candidates
 
@@ -205,18 +227,19 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
 
     overpass_data = overpass.fetch_rcn_network(coords[0], coords[1], radius_m)
     G = overpass.build_graph(overpass_data)
+    del overpass_data  # Vrij geheugen — ruwe data niet meer nodig
 
     if G.number_of_nodes() == 0:
         raise ValueError("Geen fietsknooppuntennetwerk gevonden in de buurt. Probeer een ander adres.")
 
-    G_effort = add_wind_effort_weight(G, wind_data['speed'], wind_data['direction'])
+    add_wind_effort_weight(G, wind_data['speed'], wind_data['direction'])
 
     # Condensed knooppuntgraph
     K = overpass.build_knooppunt_graph(G)
     if K.number_of_nodes() < 3:
         raise ValueError("Te weinig knooppunten gevonden in de buurt. Probeer een ander adres of grotere afstand.")
 
-    _add_knooppunt_effort(K, G_effort)
+    _add_knooppunt_effort(K, G)
 
     # Start: dichtstbijzijnde knooppunt + aanlooppad
     start_node = overpass.nearest_node(G, coords[0], coords[1])

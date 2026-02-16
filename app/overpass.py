@@ -162,7 +162,13 @@ out skel qt;
             send_alert(f"{error_msg} na {max_retries + 1} pogingen")
             raise ConnectionError(error_msg) from e
 
-    data = resp.json()
+    try:
+        data = resp.json()
+    except (json.JSONDecodeError, ValueError):
+        error_msg = f"Overpass API retourneerde ongeldig antwoord (status {resp.status_code})"
+        logger.error("%s, body: %.200s", error_msg, resp.text)
+        send_alert(error_msg)
+        raise ConnectionError(error_msg)
     logger.info("Overpass response: %d elementen", len(data.get("elements", [])))
 
     _write_cache(key, data)
@@ -305,31 +311,41 @@ def build_knooppunt_graph(G_full: nx.MultiDiGraph) -> nx.Graph:
         K.add_node(n, y=nd["y"], x=nd["x"], rcn_ref=nd["rcn_ref"])
 
     # Per knooppunt: korte Dijkstra die stopt bij naburige knooppunten
+    # Gebruikt predecessor-tracking i.p.v. volledige padkopieën (veel minder geheugen)
     for src in kp_nodes:
-        # Min-heap: (afstand, node, pad)
-        heap = [(0.0, src, [src])]
-        visited = set()
+        # Min-heap: (afstand, node)
+        heap = [(0.0, src)]
+        dist_map = {src: 0.0}
+        prev = {}  # node -> vorige node (voor padreconstructie)
 
         while heap:
-            dist, node, path = heapq.heappop(heap)
+            dist, node = heapq.heappop(heap)
 
-            if node in visited:
+            # Skip als we al een kortere route kennen
+            if dist > dist_map.get(node, float("inf")):
                 continue
-            visited.add(node)
 
             # Naburig knooppunt gevonden (niet de bron zelf)
             if node != src and node in kp_set:
                 if not K.has_edge(src, node):
+                    # Reconstrueer pad via predecessors
+                    path = []
+                    cur = node
+                    while cur is not None:
+                        path.append(cur)
+                        cur = prev.get(cur)
+                    path.reverse()
                     K.add_edge(src, node, length=dist, full_path=path)
                 continue  # Niet verder zoeken voorbij dit knooppunt
 
             # Buren verkennen
             for _, neighbor, key, edge_data in G_full.edges(node, data=True, keys=True):
-                if neighbor in visited:
-                    continue
                 new_dist = dist + edge_data.get("length", 0.0)
                 if new_dist > 15000:
                     continue
-                heapq.heappush(heap, (new_dist, neighbor, path + [neighbor]))
+                if new_dist < dist_map.get(neighbor, float("inf")):
+                    dist_map[neighbor] = new_dist
+                    prev[neighbor] = node
+                    heapq.heappush(heap, (new_dist, neighbor))
 
     return K

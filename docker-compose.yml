@@ -19,7 +19,7 @@ services:
       - overpass_cache:/app/overpass_cache
     env_file:
       - .env
-    mem_limit: 512m
+    mem_limit: 1536m
     cpus: 1.0
     restart: unless-stopped
 
