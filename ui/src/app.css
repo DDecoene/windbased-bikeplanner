@@ -21,6 +21,14 @@ body {
 	background: #4b5563;
 }
 
+/* iOS datetime-local fix */
+input[type='datetime-local'] {
+	color-scheme: dark;
+	-webkit-appearance: none;
+	appearance: none;
+	min-height: 44px;
+}
+
 /* Range slider track */
 input[type='range'] {
 	-webkit-appearance: none;
