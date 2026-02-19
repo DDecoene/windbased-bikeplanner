@@ -67,7 +67,7 @@ pnpm lint            # prettier --check
 **Docker**
 - `Dockerfile` — Python 3.12-slim backend, fixes volume permissions at startup, runs as `appuser`.
 - `ui/Dockerfile` — Node 22-slim multi-stage frontend build, non-root `appuser`. `VITE_API_URL` defaults to `/api`.
-- `Caddyfile` — HTTPS reverse proxy: `/api/*` → strip prefix → backend:8000, everything else → frontend:3000. Uses mkcert certificates for local dev.
+- `Caddyfile` — HTTPS reverse proxy: `/api/*` → strip prefix → backend:8000, everything else → frontend:3000. Local dev: mkcert certs. Production: overridden with `rgwnd.app` domain + Let's Encrypt auto-SSL.
 - `docker-compose.yml` — caddy:443 (128MB/0.25CPU), backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volume for overpass_cache. Backend/frontend ports not exposed directly (Caddy proxies).
 - `certs/` — mkcert-generated localhost TLS certificates (gitignored). Generate with `mkcert -install && mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1`.
 - `watchdog.sh` — Infrastructure health monitor (checks backend `/health` + frontend every 60s, alerts on status change).
@@ -79,7 +79,7 @@ pnpm lint            # prettier --check
 - Code comments and some variable names are in **Dutch**.
 - Geocoding is restricted to Belgium (`countrycodes=be`).
 - No database — RCN network is fetched on the fly via Overpass API (cached to disk for 1 week).
-- **Clerk authentication** required for route generation. Env vars: `PUBLIC_CLERK_PUBLISHABLE_KEY` (frontend), `CLERK_SECRET_KEY` (backend). Backend verifies JWT via `fastapi-clerk-auth` (JWKS endpoint). Sign-in methods: Google OAuth + email/password.
+- **Clerk authentication** required for route generation. Env vars: `PUBLIC_CLERK_PUBLISHABLE_KEY` (frontend), `CLERK_SECRET_KEY` (backend). Backend verifies JWT via `fastapi-clerk-auth` (JWKS endpoint: `clerk.rgwnd.app`). Sign-in methods: email/password only (no social login in production). JWT template `rgwnd-session` includes `public_metadata` for premium check.
 - **Fair use**: 50 routes/week per user (relaxed for launch). Usage tracked in Clerk `privateMetadata` (ISO week reset). Premium users (`publicMetadata.premium = true`) get unlimited routes. Backend uses `clerk-backend-api` SDK. Fail-closed: Clerk API errors block access + trigger Telegram alert. Stripe subscription code exists but is dormant (`app/stripe_routes.py`).
 - Telegram notifications are optional — configured via `.env` (see `.env.example`).
 - Prettier config: tabs, single quotes, no trailing commas, 100 char width.

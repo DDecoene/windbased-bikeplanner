@@ -2,7 +2,7 @@
 
 ## Deployment Architecture
 
-Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
+Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy reverse proxy. Live at **https://rgwnd.app**.
 
 ```
                     ┌─────────────┐
@@ -131,7 +131,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 ### Remaining
 
-- ~~Caddy reverse proxy~~ — ✅ done for local dev (mkcert + Caddyfile), production needs domain + Let's Encrypt
+- ~~Caddy reverse proxy~~ — ✅ done (local: mkcert, production: Let's Encrypt auto-SSL on rgwnd.app)
 - **In-memory caches** — lost on restart, unbounded growth, not thread-safe across workers
 - **Sync internals** — async endpoint but all HTTP calls are synchronous (blocks thread pool)
 - ~~No PWA manifest~~ — installable via manifest.json + custom icons
@@ -147,14 +147,14 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Harden Dockerfiles (non-root user)
 - [x] Add restart policies and resource limits to docker-compose
 - [x] Add cache cleanup (max age or max size)
-- [ ] Register domain (rgwnd.app or similar)
-- [ ] Provision Hetzner CX22 VPS
-- [ ] Install Docker + Docker Compose on VPS
+- [x] Register domain — rgwnd.app (Spaceship)
+- [x] Provision Hetzner CX23 VPS — 46.225.178.121, Nuremberg, Docker CE pre-installed
+- [x] Install Docker + Docker Compose on VPS — pre-installed via docker-ce image
 - [x] Add Caddy service to docker-compose.yml (local dev with mkcert certs)
-- [ ] Configure Caddy: domain → frontend, domain/api → backend, auto-SSL (production)
-- [ ] Point DNS to Hetzner VPS
-- [ ] Verify SSL works
-- [ ] Test full flow on production domain
+- [x] Configure Caddy: domain → frontend, domain/api → backend, auto-SSL (production)
+- [x] Point DNS to Hetzner VPS — A + AAAA records, Clerk CNAMEs (clerk, accounts, clkmail, dkim)
+- [x] Verify SSL works — Let's Encrypt cert auto-provisioned
+- [x] Test full flow on production domain — https://rgwnd.app
 - [x] Add GPX export feature
 - [x] Add OG meta tags for social sharing
 - [x] Add error retry with exponential backoff
@@ -166,5 +166,5 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Add Clerk authentication (sign-in/sign-up pages, backend JWT verification, auth-gated route generation)
 - [x] Add free tier usage tracking (50 routes/week fair use, Clerk metadata, usage counter in UI)
 - [x] Implement Stripe subscription code (dormant — `app/stripe_routes.py`, `app/auth.py`)
-- [ ] Configure Clerk JWT custom claims template to include `public_metadata` (needed for premium check)
-- [ ] Provision Hetzner CX22/CX23 VPS and deploy
+- [x] Configure Clerk JWT template to include `public_metadata` — `rgwnd-session` template created via API
+- [x] Provision Hetzner CX23 VPS and deploy — live at https://rgwnd.app

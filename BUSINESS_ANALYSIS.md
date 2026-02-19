@@ -87,10 +87,12 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 
 ## Cost Structure (Early Stage)
 
-- **Hosting**: €20-50/mo (VPS for API + self-hosted Overpass)
-- **Domain + SSL**: €15/yr
+- **Hosting**: €3.62/mo (Hetzner CX23 — 2 vCPU, 4GB RAM, Nuremberg)
+- **Domain**: rgwnd.app (registered on Spaceship)
+- **SSL**: Free (Let's Encrypt via Caddy, auto-renewing)
 - **No API costs**: Open-Meteo and Nominatim are free
-- **Total**: ~€50/mo to run, very lean
+- **Auth**: Clerk free tier (10k MAU)
+- **Total**: ~€5/mo to run, extremely lean
 
 ## Bottom Line
 

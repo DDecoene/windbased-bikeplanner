@@ -4,6 +4,8 @@
 
 Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwerk. Genereert lusroutes die tegenwind minimaliseren en rugwind maximaliseren op basis van real-time of voorspelde windgegevens (tot 16 dagen vooruit).
 
+**Live at [https://rgwnd.app](https://rgwnd.app)**
+
 ## How It Works
 
 1. **Geocode** the start address (Nominatim)
@@ -14,7 +16,7 @@ Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwer
 6. **Return** the route as a polyline with junction waypoints
 7. **Export** as GPX for bike computers (Garmin, Wahoo, etc.)
 
-Free account required to generate routes (Clerk authentication — Google or email sign-up). Fair use: 50 routes per week.
+Free account required to generate routes (Clerk authentication — email sign-up). Fair use: 50 routes per week.
 
 ## Running with Docker
 
@@ -61,7 +63,7 @@ pnpm dev
 
 **Frontend**
 - SvelteKit (Svelte 5), Tailwind CSS v4
-- Clerk authentication (`svelte-clerk` — Google + email sign-up)
+- Clerk authentication (`svelte-clerk` — email/password sign-up)
 - Leaflet for map rendering (CARTO Voyager tiles)
 - GPX export for bike computers
 - Planned ride: pick a future date/time, route for forecasted wind (up to 16 days)
@@ -69,7 +71,8 @@ pnpm dev
 - PWA — installable on mobile and desktop
 
 **Infrastructure**
-- Docker Compose with Caddy HTTPS reverse proxy (mkcert for local dev)
+- Docker Compose with Caddy HTTPS reverse proxy (mkcert local dev, Let's Encrypt production)
+- Hetzner CX23 VPS (2 vCPU, 4GB RAM, Nuremberg)
 - Non-root containers with resource limits
 - Watchdog health monitor with Telegram alerting
 - Overpass disk cache with auto-cleanup (1 week TTL, 500MB cap)
