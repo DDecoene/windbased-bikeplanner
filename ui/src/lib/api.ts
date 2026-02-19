@@ -101,3 +101,4 @@ export async function fetchUsage(authToken: string): Promise<UsageInfo> {
 	}
 	return response.json() as Promise<UsageInfo>;
 }
+

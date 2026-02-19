@@ -14,7 +14,7 @@ Windgeoptimaliseerde fietsrouteplanner voor het Belgische fietsknooppuntennetwer
 6. **Return** the route as a polyline with junction waypoints
 7. **Export** as GPX for bike computers (Garmin, Wahoo, etc.)
 
-Free account required to generate routes (Clerk authentication — Google or email sign-up). Free tier: 3 routes per week. Premium: unlimited.
+Free account required to generate routes (Clerk authentication — Google or email sign-up). Fair use: 50 routes per week.
 
 ## Running with Docker
 
@@ -92,8 +92,8 @@ pnpm dev
 - **Netherlands support** — extend beyond Belgium
 - ~~**Planned rides**~~ — ✅ done, free for all users
 - ~~**User accounts**~~ — ✅ done, Clerk auth (Google + email)
-- ~~**Freemium gate**~~ — ✅ done, 3 routes/week free, usage counter in UI
-- **Premium subscription** — payment flow (Stripe)
+- ~~**Freemium gate**~~ — ✅ done, 50 routes/week fair use, usage counter in UI
+- **Premium subscription** — Stripe code implemented but dormant, will activate with user growth
 - **Wind forecast overview** — show the best day to ride this week
 - **Privacy-friendly analytics** — Plausible or Umami
 
@@ -102,6 +102,8 @@ pnpm dev
 ```
 app/
   main.py        — FastAPI app, CORS, rate limiting, usage tracking, structured logging
+  auth.py        — Shared Clerk JWT auth config
+  stripe_routes.py — Stripe subscription endpoints (dormant)
   routing.py     — Wind-weighted loop finding on condensed knooppunt graph
   overpass.py    — Overpass API client, networkx graph builder, disk cache, retry logic
   weather.py     — Nominatim geocoding + Open-Meteo wind data, retry logic

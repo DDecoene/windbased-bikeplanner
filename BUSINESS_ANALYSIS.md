@@ -25,8 +25,9 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 ## Revenue Models
 
 ### 1. Freemium Subscription (primary)
-- **Free tier**: 3 routes/week (tracked via Clerk metadata, ISO week reset), all features accessible
-- **Premium** (€14.99–29.99/yr): Unlimited routes, advanced preferences (headwind avoidance intensity, scenic preferences), route history
+- **Free tier (current)**: 50 routes/week fair use (tracked via Clerk metadata, ISO week reset), all features accessible
+- **Premium** (planned, €1.99/mo or €14.99/yr): Unlimited routes, advanced preferences (headwind avoidance intensity, scenic preferences), route history
+- Stripe integration code exists but is dormant — will be activated once user base justifies it
 - Price point intentionally below Strava/Komoot to capture value-conscious cyclists
 
 ### 2. B2B / API Licensing
@@ -56,11 +57,13 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 - Mobile-responsive PWA (no app store needed initially)
 - GPX export for Garmin/Wahoo devices
 - Social features: share routes, "ride this route" links
-- ~~Introduce freemium gate~~ — ✅ done (3 routes/week free, usage counter in UI)
+- ~~Introduce freemium gate~~ — ✅ done (50 routes/week fair use, usage counter in UI). Premium/pricing UI removed for launch — will reintroduce with Stripe once user base grows.
 
 ### Phase 3 — Monetize (9-18 months)
-- Premium subscription launch
-- Native mobile apps (iOS/Android)
+- Re-enable Stripe subscription (code already implemented, dormant)
+- Reduce fair use limit from 50 to 3 routes/week, activate premium tier
+- Register bijberoep once revenue justifies it
+- Native iOS app (SwiftUI — backend already supports it, API-first architecture)
 - B2B partnerships with tourism boards
 - Expand to Germany (NRW knooppunten)
 

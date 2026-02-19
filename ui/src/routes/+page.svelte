@@ -527,26 +527,21 @@
 		</button>
 
 		<!-- Usage counter -->
-		{#if usageInfo}
-			{#if usageInfo.is_premium}
-				<p class="mt-2 text-center text-xs text-cyan-400">Premium — onbeperkt</p>
-			{:else}
-				<p class="mt-2 text-center text-xs text-gray-500">
-					{usageInfo.routes_used}/{usageInfo.routes_limit} gratis routes deze week
-				</p>
-			{/if}
+		{#if usageInfo && !usageInfo.is_premium}
+			<p class="mt-2 text-center text-xs text-gray-500">
+				{usageInfo.routes_used}/{usageInfo.routes_limit} routes deze week
+			</p>
 		{/if}
 
-		<!-- Upgrade prompt bij limiet -->
+		<!-- Limiet bereikt -->
 		{#if usageLimitReached}
-			<div class="mt-3 rounded-lg border border-cyan-500/30 bg-cyan-950/20 p-4 text-center">
-				<p class="text-sm font-medium text-cyan-300">
-					Je hebt alle gratis routes van deze week gebruikt
+			<div class="mt-3 rounded-lg border border-gray-700 bg-gray-800/40 p-4 text-center">
+				<p class="text-sm font-medium text-gray-300">
+					Je hebt het weekelijks limiet bereikt
 				</p>
-				<p class="mt-1 text-xs text-gray-400">
-					Upgrade naar Premium voor onbeperkte routes en meer features.
+				<p class="mt-1 text-xs text-gray-500">
+					Elke maandag worden je routes gereset. Tot dan!
 				</p>
-				<p class="mt-2 text-xs text-gray-500">Nieuwe week = nieuwe routes (elke maandag)</p>
 			</div>
 		{/if}
 	</form>

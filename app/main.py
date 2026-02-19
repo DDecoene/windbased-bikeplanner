@@ -10,16 +10,19 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer, HTTPAuthorizationCredentials
+from fastapi_clerk_auth import HTTPAuthorizationCredentials
 
 from clerk_backend_api import Clerk
 
+from .auth import clerk_auth
 from .models import RouteRequest, RouteResponse, UsageResponse
 from . import routing
 from .notify import send_alert
+# Stripe uitgeschakeld tot premium live gaat
+# from .stripe_routes import router as stripe_router
 
 # --- Gratis limiet ---
-FREE_ROUTES_PER_WEEK = 3
+FREE_ROUTES_PER_WEEK = 50
 
 # --- Logging ---
 logging.basicConfig(
@@ -27,14 +30,6 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
-
-# --- Clerk auth ---
-_clerk_jwks_url = os.environ.get(
-    "CLERK_JWKS_URL",
-    "https://smiling-termite-96.clerk.accounts.dev/.well-known/jwks.json"
-)
-clerk_config = ClerkConfig(jwks_url=_clerk_jwks_url)
-clerk_auth = ClerkHTTPBearer(config=clerk_config)
 
 # --- Clerk Backend API client (voor metadata) ---
 _clerk_secret = os.environ.get("CLERK_SECRET_KEY", "")
@@ -50,6 +45,7 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+# app.include_router(stripe_router)  # Stripe uitgeschakeld
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -87,10 +83,22 @@ def _current_iso_week() -> str:
 
 
 def _is_premium(credentials) -> bool:
-    """Check premium status via JWT public_metadata claim."""
+    """Check premium status via JWT public_metadata claim, met Clerk API fallback.
+
+    JWT kan 0-60s achterlopen na webhook → fallback naar Clerk API."""
     public_meta = credentials.decoded.get("public_metadata", {})
-    if isinstance(public_meta, dict):
-        return public_meta.get("premium", False) is True
+    if isinstance(public_meta, dict) and public_meta.get("premium", False) is True:
+        return True
+    # Fallback: direct Clerk API checken (voor JWT propagation delay)
+    if clerk_client:
+        try:
+            user_id = credentials.decoded.get("sub")
+            user = clerk_client.users.get(user_id=user_id)
+            pub_meta = user.public_metadata or {}
+            if isinstance(pub_meta, dict) and pub_meta.get("premium", False) is True:
+                return True
+        except Exception as e:
+            logger.warning("Clerk API fallback voor premium check mislukt: %s", e)
     return False
 
 
@@ -163,7 +171,7 @@ async def generate_route(
         if usage["count"] >= FREE_ROUTES_PER_WEEK:
             raise HTTPException(
                 status_code=403,
-                detail="Weekelijks limiet bereikt (3/3). Upgrade naar Premium voor onbeperkte routes.",
+                detail="Weekelijks limiet bereikt (50/50). Probeer het volgende week opnieuw.",
             )
 
     planned_dt = route_request.planned_datetime

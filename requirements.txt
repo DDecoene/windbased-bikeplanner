@@ -6,3 +6,4 @@ networkx>=3.2
 slowapi>=0.1.9
 fastapi-clerk-auth
 clerk-backend-api
+stripe>=8.0

@@ -77,7 +77,9 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 | # | What | Status | Notes |
 |---|------|--------|-------|
 | 23 | Planned ride (future date/time) | ✅ Done | Pick a date/time up to 16 days ahead, route optimized for forecasted wind. Free for all users (no gating). |
-| 24 | Free tier usage tracking | ✅ Done | 3 routes/week for free users, unlimited for premium. Usage stored in Clerk privateMetadata, premium check via JWT public_metadata claim. |
+| 24 | Free tier usage tracking | ✅ Done | 50 routes/week fair use (was 3, relaxed for launch). Usage stored in Clerk privateMetadata, premium check via JWT public_metadata claim. |
+| 25 | Stripe subscription | 🔧 Dormant | Code implemented (`app/stripe_routes.py`, `app/auth.py`), but router disabled in main.py. Pricing page removed. Will re-enable when user base grows. |
+| 26 | iOS native app | ⏳ Planned | SwiftUI + MapKit. Backend API-first architecture already supports it. Requires Apple Developer Program (€99/yr). |
 
 ### #23 — Planned Ride: Implementation Notes
 
@@ -109,9 +111,9 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 
 **Frontend**:
 - `fetchUsage()` in `api.ts` — called on mount + after each route generation
-- Counter below submit button: "1/3 gratis routes deze week" or "Premium — onbeperkt"
+- Counter below submit button: "X/50 routes deze week"
 - Button disabled when limit reached
-- Cyan-styled upgrade prompt (not red error) with "Nieuwe week = nieuwe routes (elke maandag)" message
+- Simple "weekelijks limiet bereikt" message (no upgrade prompt — Stripe dormant for launch)
 
 ## Current Production Gaps
 
@@ -162,5 +164,7 @@ Hetzner VPS (CX22, ~€4/mo) + Docker Compose + Caddy reverse proxy.
 - [x] Add footer with Privacy + Contact links
 - [x] Translate all frontend text to Dutch
 - [x] Add Clerk authentication (sign-in/sign-up pages, backend JWT verification, auth-gated route generation)
-- [x] Add free tier usage tracking (3 routes/week, Clerk metadata, usage counter in UI)
+- [x] Add free tier usage tracking (50 routes/week fair use, Clerk metadata, usage counter in UI)
+- [x] Implement Stripe subscription code (dormant — `app/stripe_routes.py`, `app/auth.py`)
 - [ ] Configure Clerk JWT custom claims template to include `public_metadata` (needed for premium check)
+- [ ] Provision Hetzner CX22/CX23 VPS and deploy
