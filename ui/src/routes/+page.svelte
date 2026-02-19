@@ -28,6 +28,17 @@
 	let usageInfo: UsageInfo | null = null;
 	let usageLimitReached: boolean = false;
 
+	// Reset UI bij uitloggen
+	$: if (!ctx.auth.userId) {
+		routeData = null;
+		errorMessage = null;
+		usageInfo = null;
+		usageLimitReached = false;
+		usePlannedRide = false;
+		plannedDatetime = '';
+		clearMapLayers();
+	}
+
 	// Map layers
 	let mapContainer: HTMLDivElement;
 	let mapInstance: Map | undefined;
