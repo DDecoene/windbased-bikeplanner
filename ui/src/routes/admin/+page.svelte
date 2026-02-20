@@ -62,10 +62,9 @@
 
 	$effect(() => {
 		// Wacht tot Clerk geladen is voordat we data ophalen
-		const userId = ctx.auth.userId;
 		if (initialized) return;
-		if (userId === undefined) return; // Clerk nog niet geladen
-		if (!userId) {
+		if (!ctx.isLoaded) return;
+		if (!ctx.auth.userId) {
 			goto('/sign-in');
 			return;
 		}
