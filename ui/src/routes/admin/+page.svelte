@@ -3,7 +3,6 @@
 </svelte:head>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { useClerkContext } from 'svelte-clerk';
 	import { checkAdmin, fetchAnalytics, type AnalyticsSummary } from '$lib/api';
@@ -11,6 +10,7 @@
 	const ctx = useClerkContext();
 
 	let loading = $state(true);
+	let initialized = $state(false);
 	let error = $state('');
 	let data: AnalyticsSummary | null = $state(null);
 
@@ -60,7 +60,16 @@
 		}
 	}
 
-	onMount(() => {
+	$effect(() => {
+		// Wacht tot Clerk geladen is voordat we data ophalen
+		const userId = ctx.auth.userId;
+		if (initialized) return;
+		if (userId === undefined) return; // Clerk nog niet geladen
+		if (!userId) {
+			goto('/sign-in');
+			return;
+		}
+		initialized = true;
 		loadData();
 	});
 
