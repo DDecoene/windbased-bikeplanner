@@ -17,7 +17,8 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
               └────────────┘ └────────────┘
                                │
                           overpass_cache/
-                          (Docker volume)
+                          analytics_data/
+                          (Docker volumes)
 ```
 
 - **Caddy** handles SSL automatically (Let's Encrypt, zero config)
@@ -52,7 +53,7 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 
 | # | What | Status | Notes |
 |---|------|--------|-------|
-| 14 | Privacy policy page | ✅ Done | `/privacy` — no accounts, no cookies, no analytics, third-party API disclosure |
+| 14 | Privacy policy page | ✅ Done | `/privacy` — Clerk auth disclosure, anonymous pageview tracking disclosure, third-party API disclosure |
 | 15 | Contact page | ✅ Done | `/contact` — email + FAQ accordion (Svelte 5 `$state`), dark theme |
 | 16 | Footer links | ✅ Done | Privacy + Contact + Handleiding links in main page footer |
 | 27 | User manual page | ✅ Done | `/handleiding` — 6-step Dutch user manual (account, form, results, GPX, planned ride, tips). Callout shown to unauthenticated users on homepage. |
@@ -71,7 +72,7 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 | 19 | Netherlands support | ⏳ Pending | Remove `countrycodes=be` restriction, same Overpass approach works |
 | 20 | Wind forecast overview | ⏳ Pending | Show best day to ride this week using multi-day forecast |
 | 21 | User accounts | ✅ Done | Clerk auth (Google + email), required for route generation. Backend JWT verification via `fastapi-clerk-auth`. |
-| 22 | Analytics | ⏳ Pending | Plausible or Umami (privacy-friendly, self-hostable) |
+| 22 | Analytics | ✅ Done | Self-hosted SQLite analytics — pageviews, route events, performance metrics, admin dashboard at `/admin` |
 
 ## Premium Features (Paid Subscription)
 
@@ -115,6 +116,34 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 - Counter below submit button: "X/50 routes deze week"
 - Button disabled when limit reached
 - Simple "weekelijks limiet bereikt" message (no upgrade prompt — Stripe dormant for launch)
+
+### #22 — Analytics: Implementation Notes
+
+**Backend** (`app/analytics.py`):
+- SQLite database at `analytics_data/analytics.db` (Docker named volume)
+- Two tables: `page_views` (timestamp, path, referrer, utm_source/medium/campaign) and `route_events` (timestamp, user_id, distance_km, duration_s, duration_per_km, geocoding/graph/loop/finalize timings, status, error)
+- Thread-safe: per-thread connections via `threading.local()`, WAL journal mode
+- `get_summary(start, end)` returns: pageviews by day/page, top referrers, UTM sources, route totals, success rate, performance averages (total, per km, per phase), performance by day, active users
+- Indexed on timestamp columns for fast date-range queries
+
+**Backend** (`app/main.py`):
+- `ANALYTICS_ADMIN_IDS` env var parsed into a set at startup
+- `_is_admin(credentials)` checks JWT `sub` against admin IDs
+- Route generation instrumented: `analytics.log_route_event()` on success and all error paths (ValueError, ConnectionError, Exception)
+- Endpoints: `POST /analytics/pageview` (no auth, 60/min rate limit), `GET /analytics/check-admin` (auth required), `GET /analytics/summary?start=&end=` (admin only)
+
+**Frontend** (`ui/src/routes/+layout.svelte`):
+- Fire-and-forget `POST /api/analytics/pageview` on mount + afterNavigate
+- Captures path, document.referrer, UTM params from URL query string
+- Excludes `/admin` page from tracking
+
+**Frontend** (`ui/src/routes/admin/+page.svelte`):
+- Auth gate: waits for `ctx.isLoaded`, then calls `checkAdmin()` API, redirects non-admins to `/`
+- Date range: preset buttons (Vandaag, 7/14/30/90 dagen) + custom date inputs
+- Summary cards: total pageviews, routes generated, success rate, active users
+- Performance: avg duration total, per km, and per-phase breakdown (geocoding, graph building, loop finding, finalization)
+- SVG bar chart: duration/km per day — cyan bars, yellow for >20% above average, dashed average line
+- Tables: pageviews by day, by page, routes by day, top referrers, UTM sources
 
 ## Current Production Gaps
 
@@ -170,3 +199,5 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 - [x] Implement Stripe subscription code (dormant — `app/stripe_routes.py`, `app/auth.py`)
 - [x] Configure Clerk JWT template to include `public_metadata` — `rgwnd-session` template created via API
 - [x] Provision Hetzner CX23 VPS and deploy — live at https://rgwnd.app
+- [x] Add self-hosted analytics (`app/analytics.py`, SQLite, admin dashboard at `/admin`)
+- [x] Add `ANALYTICS_ADMIN_IDS` env var for admin access control

@@ -59,6 +59,7 @@ pnpm dev
 - networkx for graph operations and routing
 - Open-Meteo for real-time and forecasted wind data (up to 16 days ahead)
 - Nominatim for geocoding (restricted to Belgium)
+- Self-hosted SQLite analytics (pageviews, route events, performance metrics)
 - Structured logging, Telegram ops alerts (optional)
 
 **Frontend**
@@ -76,6 +77,7 @@ pnpm dev
 - Non-root containers with resource limits
 - Watchdog health monitor with Telegram alerting
 - Overpass disk cache with auto-cleanup (1 week TTL, 500MB cap)
+- SQLite analytics with Docker named volume persistence
 - Retry with exponential backoff on all external API calls
 
 ## Configuration
@@ -89,6 +91,7 @@ pnpm dev
 | `OVERPASS_URL` | Overpass API endpoint | `https://overpass.kumi.systems/api/interpreter` |
 | `PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (frontend) | _(required)_ |
 | `CLERK_SECRET_KEY` | Clerk secret key (backend JWT verification) | _(required)_ |
+| `ANALYTICS_ADMIN_IDS` | Comma-separated Clerk user IDs for admin access | _(optional)_ |
 
 ## Roadmap
 
@@ -98,14 +101,15 @@ pnpm dev
 - ~~**Freemium gate**~~ — ✅ done, 50 routes/week fair use, usage counter in UI
 - **Premium subscription** — Stripe code implemented but dormant, will activate with user growth
 - **Wind forecast overview** — show the best day to ride this week
-- **Privacy-friendly analytics** — Plausible or Umami
+- ~~**Privacy-friendly analytics**~~ — ✅ done, self-hosted SQLite analytics with admin dashboard at `/admin`
 
 ## Project Structure
 
 ```
 app/
-  main.py        — FastAPI app, CORS, rate limiting, usage tracking, structured logging
+  main.py        — FastAPI app, CORS, rate limiting, usage tracking, analytics endpoints, structured logging
   auth.py        — Shared Clerk JWT auth config
+  analytics.py   — SQLite analytics store (pageviews, route events, summary queries)
   stripe_routes.py — Stripe subscription endpoints (dormant)
   routing.py     — Wind-weighted loop finding on condensed knooppunt graph
   overpass.py    — Overpass API client, networkx graph builder, disk cache, retry logic
@@ -113,7 +117,8 @@ app/
   models.py      — Pydantic request/response models
   notify.py      — Telegram ops alerts (optional)
 ui/
-  src/routes/             — SvelteKit pages (home, privacy, contact, handleiding, sign-in, sign-up)
+  src/routes/             — SvelteKit pages (home, privacy, contact, handleiding, admin, sign-in, sign-up)
+  src/routes/admin/       — Analytics admin dashboard (auth-gated)
   src/routes/sign-in/     — Clerk sign-in page
   src/routes/sign-up/     — Clerk sign-up page
   src/routes/privacy/     — Privacy policy page
