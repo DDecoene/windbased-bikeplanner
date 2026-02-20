@@ -557,6 +557,25 @@
 		{/if}
 	</form>
 
+	<!-- Handleiding callout voor niet-ingelogde gebruikers -->
+	{#if !ctx.auth.userId}
+		<div class="flex items-center gap-3 rounded-lg border border-gray-800 bg-gray-900/60 px-4 py-3 text-sm text-gray-400">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-4 w-4 shrink-0 text-cyan-500"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="1.5"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25" />
+			</svg>
+			<span>
+				Eerste keer hier? <a href="/handleiding" class="text-cyan-400 transition hover:text-cyan-300 hover:underline">Bekijk de handleiding</a> om te zien hoe RGWND werkt.
+			</span>
+		</div>
+	{/if}
+
 	<!-- Results + Map -->
 	<div
 		class="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-lg backdrop-blur-sm"
@@ -705,6 +724,8 @@
 </main>
 
 <footer class="mx-auto w-full max-w-5xl px-4 pt-2 pb-6 text-center text-xs text-gray-600">
+	<a href="/handleiding" class="transition hover:text-gray-400">Handleiding</a>
+	<span class="mx-2">·</span>
 	<a href="/privacy" class="transition hover:text-gray-400">Privacybeleid</a>
 	<span class="mx-2">·</span>
 	<a href="/contact" class="transition hover:text-gray-400">Contact</a>

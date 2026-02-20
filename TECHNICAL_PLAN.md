@@ -54,7 +54,8 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 |---|------|--------|-------|
 | 14 | Privacy policy page | ✅ Done | `/privacy` — no accounts, no cookies, no analytics, third-party API disclosure |
 | 15 | Contact page | ✅ Done | `/contact` — email + FAQ accordion (Svelte 5 `$state`), dark theme |
-| 16 | Footer links | ✅ Done | Privacy + Contact links in main page footer |
+| 16 | Footer links | ✅ Done | Privacy + Contact + Handleiding links in main page footer |
+| 27 | User manual page | ✅ Done | `/handleiding` — 6-step Dutch user manual (account, form, results, GPX, planned ride, tips). Callout shown to unauthenticated users on homepage. |
 
 ## Should-Have (Continued 2)
 
@@ -161,7 +162,8 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 - [x] Add frontend request timeout (120s)
 - [x] Add privacy policy page (`/privacy`)
 - [x] Add contact page with FAQ accordion (`/contact`)
-- [x] Add footer with Privacy + Contact links
+- [x] Add footer with Privacy + Contact + Handleiding links
+- [x] Add user manual page (`/handleiding`) with callout for unauthenticated users on homepage
 - [x] Translate all frontend text to Dutch
 - [x] Add Clerk authentication (sign-in/sign-up pages, backend JWT verification, auth-gated route generation)
 - [x] Add free tier usage tracking (50 routes/week fair use, Clerk metadata, usage counter in UI)

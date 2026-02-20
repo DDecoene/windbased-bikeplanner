@@ -113,11 +113,12 @@ app/
   models.py      — Pydantic request/response models
   notify.py      — Telegram ops alerts (optional)
 ui/
-  src/routes/          — SvelteKit pages (home, privacy, contact, sign-in, sign-up)
-  src/routes/sign-in/  — Clerk sign-in page
-  src/routes/sign-up/  — Clerk sign-up page
-  src/routes/privacy/  — Privacy policy page
-  src/routes/contact/  — Contact page with FAQ accordion
+  src/routes/             — SvelteKit pages (home, privacy, contact, handleiding, sign-in, sign-up)
+  src/routes/sign-in/     — Clerk sign-in page
+  src/routes/sign-up/     — Clerk sign-up page
+  src/routes/privacy/     — Privacy policy page
+  src/routes/contact/     — Contact page with FAQ accordion
+  src/routes/handleiding/ — User manual (Dutch, 6 steps)
   src/lib/             — API client, types, AuthHeader component
   src/hooks.server.ts  — Clerk server hook
 ```

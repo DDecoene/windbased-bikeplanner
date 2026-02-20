@@ -58,9 +58,10 @@ pnpm lint            # prettier --check
 - `src/lib/AuthHeader.svelte` — Fixed top-right auth UI (avatar when signed in, "Inloggen" link when signed out).
 - `src/routes/sign-in/[...rest]/+page.svelte` — Clerk SignIn component (dark themed).
 - `src/routes/sign-up/[...rest]/+page.svelte` — Clerk SignUp component (dark themed).
-- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. Auth check on submit with sessionStorage form persistence. Usage counter below submit button (X/50 routes deze week), disabled button when limit reached. Footer with Privacy + Contact links.
+- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. Auth check on submit with sessionStorage form persistence. Usage counter below submit button (X/50 routes deze week), disabled button when limit reached. Callout for unauthenticated users linking to /handleiding. Footer with Handleiding + Privacy + Contact links.
 - `src/routes/privacy/+page.svelte` — Privacy policy (Clerk auth disclosure, third-party API disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
+- `src/routes/handleiding/+page.svelte` — Dutch user manual: 6-step guide (account, form, results, GPX, planned ride, tips). Linked from footer and callout on homepage.
 - `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token, `fetchUsage()` for usage tracking. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy). Stripe functions removed (dormant).
 - `src/app.html` — Static OG/Twitter meta tags (Dutch, `og:locale=nl_BE`). PWA manifest + theme-color.
 
