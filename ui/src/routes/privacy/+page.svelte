@@ -30,8 +30,17 @@
 				</li>
 			</ul>
 			<p class="mt-2">
-				RGWND slaat zelf geen routegegevens of gebruikersdata op in een eigen database. Er zijn geen
-				analytics-cookies of tracking.
+				RGWND slaat zelf geen routegegevens of gebruikersdata op in een eigen database.
+			</p>
+		</section>
+
+		<section>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Gebruik van de site</h2>
+			<p>
+				RGWND houdt anonieme paginabezoeken bij (welke pagina, verwijzende website) om de dienst
+				te verbeteren. Er worden geen cookies geplaatst en er is geen persoonlijke identificatie
+				mogelijk op basis van paginabezoeken. Bij het genereren van routes worden
+				prestatiegegevens (duur, afstand) opgeslagen om de service te monitoren.
 			</p>
 		</section>
 

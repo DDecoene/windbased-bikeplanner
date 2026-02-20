@@ -102,3 +102,55 @@ export async function fetchUsage(authToken: string): Promise<UsageInfo> {
 	return response.json() as Promise<UsageInfo>;
 }
 
+// --- Analytics ---
+
+export async function checkAdmin(authToken: string): Promise<boolean> {
+	const response = await fetch(`${API_URL}/analytics/check-admin`, {
+		headers: { Authorization: `Bearer ${authToken}` }
+	});
+	if (!response.ok) return false;
+	const data = (await response.json()) as { is_admin: boolean };
+	return data.is_admin;
+}
+
+export interface AnalyticsSummary {
+	period: { start: string; end: string };
+	pageviews_total: number;
+	pageviews_by_day: { date: string; count: number }[];
+	pageviews_by_page: { path: string; count: number }[];
+	top_referrers: { referrer: string; count: number }[];
+	utm_sources: { source: string; medium: string | null; campaign: string | null; count: number }[];
+	routes_total: number;
+	routes_succeeded: number;
+	routes_by_day: { date: string; total: number; succeeded: number }[];
+	performance: {
+		avg_duration_total: number | null;
+		avg_duration_per_km: number | null;
+		avg_geocoding: number | null;
+		avg_graph: number | null;
+		avg_loop: number | null;
+		avg_finalize: number | null;
+	};
+	performance_by_day: {
+		date: string;
+		avg_duration: number | null;
+		avg_duration_per_km: number | null;
+	}[];
+	active_users: number;
+}
+
+export async function fetchAnalytics(
+	authToken: string,
+	start: string,
+	end: string
+): Promise<AnalyticsSummary> {
+	const response = await fetch(
+		`${API_URL}/analytics/summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+		{ headers: { Authorization: `Bearer ${authToken}` } }
+	);
+	if (!response.ok) {
+		throw new Error('Kan analytics niet ophalen.');
+	}
+	return response.json() as Promise<AnalyticsSummary>;
+}
+

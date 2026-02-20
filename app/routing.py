@@ -339,7 +339,8 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
         "route_geometry": route_geometry,
         "wind_conditions": wind_data,
         "planned_datetime": planned_datetime.isoformat() if planned_datetime else None,
-        "message": message
+        "message": message,
+        "timings": timings,
     }
 
     if debug:

@@ -2,7 +2,8 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -16,13 +17,17 @@ from clerk_backend_api import Clerk
 
 from .auth import clerk_auth
 from .models import RouteRequest, RouteResponse, UsageResponse
-from . import routing
+from . import analytics, routing
 from .notify import send_alert
 # Stripe uitgeschakeld tot premium live gaat
 # from .stripe_routes import router as stripe_router
 
 # --- Gratis limiet ---
 FREE_ROUTES_PER_WEEK = 50
+
+# --- Analytics admin IDs ---
+_admin_ids_str = os.environ.get("ANALYTICS_ADMIN_IDS", "")
+ADMIN_USER_IDS = {uid.strip() for uid in _admin_ids_str.split(",") if uid.strip()}
 
 # --- Logging ---
 logging.basicConfig(
@@ -43,6 +48,7 @@ app = FastAPI(
     description="API for generating wind-optimized cycling loop routes.",
     version="2.0.0",
 )
+analytics.init_db()
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 # app.include_router(stripe_router)  # Stripe uitgeschakeld
@@ -100,6 +106,11 @@ def _is_premium(credentials) -> bool:
         except Exception as e:
             logger.warning("Clerk API fallback voor premium check mislukt: %s", e)
     return False
+
+
+def _is_admin(credentials) -> bool:
+    """Check of gebruiker een analytics-admin is (via ANALYTICS_ADMIN_IDS env var)."""
+    return credentials.decoded.get("sub") in ADMIN_USER_IDS
 
 
 def _get_usage(user_id: str) -> dict:
@@ -198,16 +209,48 @@ async def generate_route(
             planned_datetime=planned_dt,
             debug=debug
         )
+        # Analytics: log succesvolle route
+        try:
+            analytics.log_route_event(
+                user_id=user_id,
+                distance_requested=route_request.distance_km,
+                distance_actual=route_data.get("actual_distance_km"),
+                timings=route_data.get("timings"),
+                junction_count=len(route_data.get("junctions", [])),
+                wind_speed=route_data.get("wind_conditions", {}).get("speed"),
+                planned_ride=planned_dt is not None,
+                success=True,
+            )
+        except Exception:
+            logger.warning("Analytics logging mislukt", exc_info=True)
         # Verhoog usage na succesvolle route generatie
         if not premium:
             _increment_usage(user_id, usage)
         return RouteResponse(**route_data)
     except ValueError as e:
+        analytics.log_route_event(
+            user_id=user_id, distance_requested=route_request.distance_km,
+            distance_actual=None, timings=None, junction_count=None,
+            wind_speed=None, planned_ride=planned_dt is not None,
+            success=False, error_type="ValueError",
+        )
         raise HTTPException(status_code=404, detail=str(e))
     except ConnectionError as e:
+        analytics.log_route_event(
+            user_id=user_id, distance_requested=route_request.distance_km,
+            distance_actual=None, timings=None, junction_count=None,
+            wind_speed=None, planned_ride=planned_dt is not None,
+            success=False, error_type="ConnectionError",
+        )
         send_alert(f"Service onbereikbaar: {e}")
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        analytics.log_route_event(
+            user_id=user_id, distance_requested=route_request.distance_km,
+            distance_actual=None, timings=None, junction_count=None,
+            wind_speed=None, planned_ride=planned_dt is not None,
+            success=False, error_type=type(e).__name__,
+        )
         logger.error("Unexpected error in /generate-route: %s", e, exc_info=True)
         send_alert(f"500 error in /generate-route: {e}")
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
@@ -219,3 +262,54 @@ def health():
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the RGWND API. Go to /docs for documentation."}
+
+
+# --- Analytics endpoints ---
+
+class PageviewRequest(BaseModel):
+    path: str = Field(..., max_length=500)
+    referrer: str | None = Field(None, max_length=2000)
+    utm_source: str | None = Field(None, max_length=200)
+    utm_medium: str | None = Field(None, max_length=200)
+    utm_campaign: str | None = Field(None, max_length=200)
+
+
+@app.post("/analytics/pageview", status_code=204)
+@limiter.limit("60/minute")
+async def track_pageview(request: Request, body: PageviewRequest):
+    """Registreer een paginabezoek (anoniem, geen auth vereist)."""
+    try:
+        analytics.log_pageview(
+            path=body.path,
+            referrer=body.referrer,
+            utm_source=body.utm_source,
+            utm_medium=body.utm_medium,
+            utm_campaign=body.utm_campaign,
+        )
+    except Exception:
+        logger.warning("Analytics pageview logging mislukt", exc_info=True)
+    return None
+
+
+@app.get("/analytics/check-admin")
+@limiter.limit("30/minute")
+async def check_admin(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(clerk_auth),
+):
+    """Controleer of de ingelogde gebruiker analytics-admin is."""
+    return {"is_admin": _is_admin(credentials)}
+
+
+@app.get("/analytics/summary")
+@limiter.limit("30/minute")
+async def analytics_summary(
+    request: Request,
+    start: str = Query(..., description="Startdatum (YYYY-MM-DD)"),
+    end: str = Query(..., description="Einddatum (YYYY-MM-DD)"),
+    credentials: HTTPAuthorizationCredentials = Depends(clerk_auth),
+):
+    """Haal analytics-samenvatting op (alleen voor admins)."""
+    if not _is_admin(credentials):
+        raise HTTPException(status_code=403, detail="Geen toegang.")
+    return analytics.get_summary(start_date=start, end_date=end)
