@@ -192,27 +192,89 @@
 			</div>
 
 			{#if data.performance_by_day.length > 0}
-				<h3 class="mt-4 mb-2 text-sm font-medium text-gray-400">Per dag</h3>
+				{@const days = data.performance_by_day.filter((d) => d.avg_duration_per_km != null)}
+				{@const values = days.map((d) => d.avg_duration_per_km!)}
+				{@const maxVal = Math.max(...values, 0.001)}
+				{@const avgVal = data.performance.avg_duration_per_km ?? 0}
+				{@const chartW = 600}
+				{@const chartH = 160}
+				{@const barW = Math.max(4, Math.min(32, (chartW - days.length * 2) / days.length))}
+				{@const gap = 2}
+				{@const totalW = days.length * (barW + gap) - gap}
+				{@const offsetX = (chartW - totalW) / 2}
+
+				<h3 class="mt-5 mb-2 text-sm font-medium text-gray-400">
+					Duur per km (s/km)
+				</h3>
 				<div class="overflow-x-auto">
-					<table class="w-full text-left text-sm">
-						<thead>
-							<tr class="border-b border-gray-800 text-gray-500">
-								<th class="py-1.5 pr-4">Datum</th>
-								<th class="py-1.5 pr-4">Gem. duur</th>
-								<th class="py-1.5">Gem. duur/km</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each data.performance_by_day as row}
-								<tr class="border-b border-gray-800/50 text-gray-300">
-									<td class="py-1.5 pr-4">{row.date}</td>
-									<td class="py-1.5 pr-4">{fmt(row.avg_duration)}s</td>
-									<td class="py-1.5">{fmt(row.avg_duration_per_km, 3)}s</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
+					<svg
+						viewBox="0 0 {chartW} {chartH + 24}"
+						class="w-full"
+						style="max-width: {chartW}px"
+					>
+						<!-- Gemiddelde lijn -->
+						{#if avgVal > 0}
+							{@const avgY = chartH - (avgVal / maxVal) * chartH}
+							<line
+								x1="0"
+								y1={avgY}
+								x2={chartW}
+								y2={avgY}
+								stroke="#06b6d4"
+								stroke-width="1"
+								stroke-dasharray="6 4"
+								opacity="0.5"
+							/>
+							<text
+								x={chartW - 4}
+								y={avgY - 4}
+								text-anchor="end"
+								fill="#06b6d4"
+								font-size="10"
+								opacity="0.7"
+							>
+								gem. {avgVal.toFixed(3)}s
+							</text>
+						{/if}
+
+						<!-- Bars -->
+						{#each days as day, i}
+							{@const val = day.avg_duration_per_km!}
+							{@const barH = (val / maxVal) * chartH}
+							{@const x = offsetX + i * (barW + gap)}
+							{@const y = chartH - barH}
+							{@const isAboveAvg = avgVal > 0 && val > avgVal * 1.2}
+
+							<rect
+								{x}
+								{y}
+								width={barW}
+								height={Math.max(barH, 1)}
+								rx="2"
+								fill={isAboveAvg ? '#f59e0b' : '#06b6d4'}
+								opacity="0.8"
+							>
+								<title>{day.date}: {val.toFixed(3)}s/km</title>
+							</rect>
+
+							<!-- Datum labels (elke N dagen, afhankelijk van aantal) -->
+							{#if days.length <= 14 || i % Math.ceil(days.length / 14) === 0}
+								<text
+									x={x + barW / 2}
+									y={chartH + 14}
+									text-anchor="middle"
+									fill="#6b7280"
+									font-size="9"
+								>
+									{day.date.slice(5)}
+								</text>
+							{/if}
+						{/each}
+					</svg>
 				</div>
+				<p class="mt-1 text-xs text-gray-600">
+					Geel = &gt;20% boven gemiddelde
+				</p>
 			{/if}
 		</div>
 
