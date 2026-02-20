@@ -8,6 +8,7 @@
 	let { children } = $props();
 
 	function trackPageView() {
+		if (window.location.pathname.startsWith('/admin')) return;
 		const params = new URLSearchParams(window.location.search);
 		fetch('/api/analytics/pageview', {
 			method: 'POST',
