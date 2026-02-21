@@ -198,7 +198,7 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
             if neighbor in visited:          continue
             if new_dist > max_dist:          continue
             if len(path) >= max_depth:       continue
-            if new_dist + dist_to_start[neighbor] * 0.7 > max_dist: continue
+            if new_dist + dist_to_start[neighbor] > max_dist: continue
 
             visited.add(neighbor)
             path.append(neighbor)
@@ -332,9 +332,10 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     best_score = float("inf")
     candidates = []
 
-    # Scale max_depth met doelafstand: gem. 4km per knooppunt-edge, +8 marge
-    # Voor 25km: 15, voor 50km: 20, voor 100km: 33, voor 150km: 46
-    max_depth = max(15, int(distance_km / 4) + 8)
+    # Scale max_depth met doelafstand. Aanname: min. 1km per knooppunt-edge.
+    # Formule: distance_km hops (1/km) + 30 veiligheidsmarge, minimum 50.
+    # Voor 25km: 55, voor 50km: 80, voor 100km: 130, voor 150km: 180
+    max_depth = max(50, int(distance_km) + 30)
     logger.info("DFS max_depth=%d voor %.0fkm route, %d knooppunten",
                 max_depth, distance_km, K.number_of_nodes())
 
