@@ -24,6 +24,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.pnpm-store
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -127,3 +128,4 @@ certs/
 .pnpm-store/
 .claude/settings.local.json
 example_routes/
+graph_data/

@@ -12,7 +12,12 @@
         ".asciidoc"
       ],
       "code": [
-        ".py"
+        ".py",
+        ".svelte",
+        ".html",
+        ".ts",
+        ".js",
+        ".css"
       ],
       "docs": [
         ".md",
@@ -42,7 +47,9 @@
         "cache",
         "osmnx_cache",
         "out",
-        "__pycache__"
+        "__pycache__",
+        ".svelte-kit",
+        ".pnpm-store"
       ],
       "files": [
         ".DS_Store",
