@@ -92,107 +92,111 @@
 	// --- Strava-deelafbeelding ---
 
 	function downloadImage(data: RouteResponse): void {
-		// Portretformaat: ideaal voor mobiele Strava-feed
+		// Vierkant formaat: universeel compatibel, nooit afgesneden in Strava
 		const W = 1080,
-			H = 1350;
+			H = 1080;
 		const canvas = document.createElement('canvas');
 		canvas.width = W;
 		canvas.height = H;
 		const ctx = canvas.getContext('2d')!;
 		const PAD = 52;
 
+		// Zones: header=72, stats=128, map=720, junctions=100, footer=60  (totaal=1080)
+		const HEADER_H = 72;
+		const STATS_H = 128;
+		const MAP_H = 720;
+		const JUNC_H = 100;
+		// FOOTER_H = 60
+
 		// Achtergrond
 		ctx.fillStyle = '#030712';
 		ctx.fillRect(0, 0, W, H);
 
-		// --- Header (h=90) ---
+		// --- Header ---
 		ctx.fillStyle = '#0c1220';
-		ctx.fillRect(0, 0, W, 90);
+		ctx.fillRect(0, 0, W, HEADER_H);
 		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, 90, W, 1);
+		ctx.fillRect(0, HEADER_H, W, 1);
 
 		// Logo: "RGWND" cyaan + ".app" grijs
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'middle';
-		ctx.font = 'bold 34px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#06b6d4';
-		ctx.fillText('RGWND', PAD, 46);
+		ctx.fillText('RGWND', PAD, HEADER_H / 2);
 		const rgwndW = ctx.measureText('RGWND').width;
-		ctx.font = '34px system-ui, -apple-system, sans-serif';
+		ctx.font = '32px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#334155';
-		ctx.fillText('.app', PAD + rgwndW, 46);
+		ctx.fillText('.app', PAD + rgwndW, HEADER_H / 2);
 
-		// --- Stats sectie (h=220, y=91) ---
-		const statsY = 91;
-		const statsH = 220;
+		// --- Stats rij ---
+		const statsY = HEADER_H + 1;
 		const midX = W / 2;
 
-		// Cyaan scheidingslijn tussen afstand en wind
+		// Cyaan scheidingslijn
 		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(midX, statsY + 30, 1, statsH - 60);
+		ctx.fillRect(midX, statsY + 16, 1, STATS_H - 32);
 
 		// Afstand (links)
 		const distStr = String(data.actual_distance_km);
-		ctx.font = 'bold 88px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#f1f5f9';
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText(distStr, PAD, statsY + 148);
+		ctx.fillText(distStr, PAD, statsY + 92);
 		const distWidth = ctx.measureText(distStr).width;
-		ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#334155';
-		ctx.fillText(' km', PAD + distWidth, statsY + 148);
-		ctx.font = '13px system-ui, -apple-system, sans-serif';
+		ctx.fillText(' km', PAD + distWidth, statsY + 92);
+		ctx.font = '12px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#475569';
-		ctx.fillText('AFSTAND', PAD, statsY + 185);
+		ctx.fillText('AFSTAND', PAD, statsY + 114);
 
 		// Wind (rechts)
 		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
 		const windDir = degreesToCardinal(data.wind_conditions.direction);
 		const windX = midX + PAD;
 
-		ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 44px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#f1f5f9';
 		ctx.textAlign = 'left';
-		ctx.fillText(windKmh, windX, statsY + 120);
+		ctx.fillText(windKmh, windX, statsY + 60);
 		const wW = ctx.measureText(windKmh).width;
-		ctx.font = '24px system-ui, -apple-system, sans-serif';
+		ctx.font = '20px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#475569';
-		ctx.fillText(' km/h', windX + wW, statsY + 120);
+		ctx.fillText(' km/h', windX + wW, statsY + 60);
 
-		ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#06b6d4';
-		ctx.fillText(windDir, windX, statsY + 165);
-
-		ctx.font = '13px system-ui, -apple-system, sans-serif';
+		ctx.fillText(windDir, windX, statsY + 95);
+		ctx.font = '12px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#475569';
-		ctx.fillText('WIND', windX, statsY + 185);
+		ctx.fillText('WIND', windX, statsY + 114);
 
 		// Windpijl
 		const arrowRot = windArrowRotation(data.wind_conditions.direction);
 		ctx.save();
-		ctx.translate(W - PAD - 24, statsY + 130);
+		ctx.translate(W - PAD - 20, statsY + 64);
 		ctx.rotate((arrowRot * Math.PI) / 180);
 		ctx.fillStyle = '#06b6d4';
 		ctx.beginPath();
-		ctx.moveTo(0, -24);
-		ctx.lineTo(16, 0);
-		ctx.lineTo(5, 0);
-		ctx.lineTo(5, 20);
-		ctx.lineTo(-5, 20);
-		ctx.lineTo(-5, 0);
-		ctx.lineTo(-16, 0);
+		ctx.moveTo(0, -20);
+		ctx.lineTo(14, 0);
+		ctx.lineTo(4, 0);
+		ctx.lineTo(4, 16);
+		ctx.lineTo(-4, 16);
+		ctx.lineTo(-4, 0);
+		ctx.lineTo(-14, 0);
 		ctx.closePath();
 		ctx.fill();
 		ctx.restore();
 
 		// Separator
 		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, statsY + statsH, W, 1);
+		ctx.fillRect(0, statsY + STATS_H, W, 1);
 
-		// --- Route schets (y=311, h=740) ---
-		const mapY = statsY + statsH + 1;
-		const mapH = 740;
+		// --- Route schets ---
+		const mapY = statsY + STATS_H + 1;
 
 		const allPoints: [number, number][] = data.route_geometry.flat();
 		if (allPoints.length > 1) {
@@ -207,9 +211,9 @@
 			const normLonRange = (maxLon - minLon) * cosLat || 0.01;
 			const normLatRange = maxLat - minLat || 0.01;
 
-			const drawPad = 60;
+			const drawPad = 56;
 			const availW = W - drawPad * 2;
-			const availH = mapH - drawPad * 2;
+			const availH = MAP_H - drawPad * 2;
 
 			const scale = Math.min(availW / normLonRange, availH / normLatRange) * 0.88;
 			const drawnW = normLonRange * scale;
@@ -220,7 +224,6 @@
 			const toX = (lon: number) => offsetX + (lon - minLon) * cosLat * scale;
 			const toY = (lat: number) => offsetY + (maxLat - lat) * scale;
 
-			// Route met glow
 			ctx.shadowColor = '#06b6d4';
 			ctx.shadowBlur = 12;
 			ctx.strokeStyle = '#06b6d4';
@@ -239,7 +242,6 @@
 			}
 			ctx.shadowBlur = 0;
 
-			// Knooppuntpunten
 			for (const jc of data.junction_coords) {
 				const cx = toX(jc.lon);
 				const cy = toY(jc.lat);
@@ -255,56 +257,55 @@
 			}
 		}
 
-		// --- Knooppunten sectie (y=1052, h=210) ---
-		const juncY = mapY + mapH;
+		// --- Knooppunten strip ---
+		const juncY = mapY + MAP_H;
 		ctx.fillStyle = '#0c1220';
-		ctx.fillRect(0, juncY, W, 210);
+		ctx.fillRect(0, juncY, W, JUNC_H);
 		ctx.fillStyle = '#1e293b';
 		ctx.fillRect(0, juncY, W, 1);
 
-		// Cyaan accent streep links
 		ctx.fillStyle = '#06b6d4';
-		ctx.fillRect(PAD, juncY + 28, 3, 120);
+		ctx.fillRect(PAD, juncY + 18, 3, JUNC_H - 36);
 
-		ctx.font = '12px system-ui, -apple-system, sans-serif';
+		ctx.font = '11px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#475569';
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'alphabetic';
-		ctx.fillText('ROUTE', PAD + 18, juncY + 52);
+		ctx.fillText('ROUTE', PAD + 14, juncY + 36);
 
 		const junctionStr = data.junctions.join(' → ');
-		ctx.font = '20px system-ui, -apple-system, sans-serif';
+		ctx.font = '18px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#67e8f9';
 		const words = junctionStr.split(' ');
 		let line = '';
-		let jY = juncY + 82;
-		const maxJW = W - PAD * 2 - 18;
+		let jY = juncY + 62;
+		const maxJW = W - PAD * 2 - 14;
 		for (const word of words) {
 			const test = line ? `${line} ${word}` : word;
 			if (ctx.measureText(test).width > maxJW && line) {
-				ctx.fillText(line, PAD + 18, jY);
+				ctx.fillText(line, PAD + 14, jY);
 				line = word;
-				jY += 30;
+				jY += 24;
 			} else {
 				line = test;
 			}
 		}
-		if (line) ctx.fillText(line, PAD + 18, jY);
+		if (line) ctx.fillText(line, PAD + 14, jY);
 
-		// --- Footer (y=1262, h=88) ---
-		const footY = juncY + 210;
+		// --- Footer ---
+		const footY = juncY + JUNC_H;
 		ctx.fillStyle = '#1e293b';
 		ctx.fillRect(0, footY, W, 1);
 
-		ctx.font = '15px system-ui, -apple-system, sans-serif';
+		ctx.font = '13px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#334155';
 		ctx.textAlign = 'left';
-		ctx.fillText('Wind-geoptimaliseerde fietsroutes · België', PAD, footY + 50);
+		ctx.fillText('Wind-geoptimaliseerde fietsroutes · België', PAD, footY + 38);
 
-		ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#06b6d4';
 		ctx.textAlign = 'right';
-		ctx.fillText('rgwnd.app', W - PAD, footY + 50);
+		ctx.fillText('rgwnd.app', W - PAD, footY + 38);
 
 		// Downloaden
 		const a = document.createElement('a');
