@@ -75,19 +75,6 @@ def _nodes_to_polyline_from_coords(path: List[int], coords: dict[int, tuple[floa
 
 # --- Knooppunt loop: wind effort op condensed edges ---
 
-def _add_knooppunt_effort_from_segments(K: nx.Graph, wind_speed: float, wind_dir: float):
-    """
-    Bereken wind-effort per richting voor knooppunt-edges via pre-opgeslagen segmenten.
-    Geen SQLite-lookups — segments zijn ingebakken in de knooppunt pickle.
-    """
-    for u, v, data in K.edges(data=True):
-        effort_fwd = 0.0
-        effort_rev = 0.0
-        for seg_len, seg_brng in data.get("segments", []):
-            effort_fwd += calculate_effort_cost(seg_len, seg_brng, wind_speed, wind_dir)
-            effort_rev += calculate_effort_cost(seg_len, (seg_brng + 180) % 360, wind_speed, wind_dir)
-        data["effort_fwd"] = effort_fwd
-        data["effort_rev"] = effort_rev
 
 
 def _add_knooppunt_effort(K: nx.Graph, G_effort: nx.MultiDiGraph):
@@ -193,10 +180,14 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
     return candidates
 
 
-def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
+def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float,
+                wind_speed: float = 0.0, wind_dir: float = 0.0) -> float:
     """
     Score een knooppunt-loop: lagere score = beter.
     Combineert wind-effort met afstandsafwijking.
+
+    Pre-built pad: berekent effort on-the-fly uit edge["segments"] (geen K-mutatie nodig).
+    Overpass-pad: gebruikt pre-berekende edge["effort_fwd"/"effort_rev"].
     """
     total_effort = 0.0
     total_length = 0.0
@@ -204,11 +195,15 @@ def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
         u, v = kp_loop[i], kp_loop[i + 1]
         edge = K.edges[u, v]
         total_length += edge["length"]
-        # Effort in de juiste richting
-        if edge["full_path"][0] == u:
-            total_effort += edge["effort_fwd"]
+        forward = edge["full_path"][0] == u
+        if "segments" in edge:
+            # Pre-built pad: bereken effort uit segmenten
+            for seg_len, seg_brng in edge["segments"]:
+                brng = seg_brng if forward else (seg_brng + 180) % 360
+                total_effort += calculate_effort_cost(seg_len, brng, wind_speed, wind_dir)
         else:
-            total_effort += edge["effort_rev"]
+            # Overpass fallback: gebruik pre-berekende effort
+            total_effort += edge["effort_fwd"] if forward else edge["effort_rev"]
 
     distance_penalty = abs(total_length - target_m) * 5
     return total_effort + distance_penalty
@@ -246,13 +241,11 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     use_prebuilt = graph_mgr.loaded
 
     if use_prebuilt:
-        # --- Pre-built pad: volledige knooppuntgraph uit geheugen ---
+        # --- Pre-built pad: directe referentie naar knooppuntgraph (geen kopie) ---
         logger.info("Gebruik pre-built graph (radius=%dm)", radius_m)
         K = graph_mgr.get_knooppunt_graph()
         if K is None or K.number_of_nodes() < 3:
             raise ValueError("Te weinig knooppunten gevonden in de buurt. Probeer een ander adres of grotere afstand.")
-
-        _add_knooppunt_effort_from_segments(K, wind_data['speed'], wind_data['direction'])
 
         # Approach path via klein SQLite subgraph
         start_kp_id = graph_mgr.nearest_knooppunt(coords[0], coords[1])
@@ -326,7 +319,7 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     stats['candidate_loops'] = len(candidates)
 
     for kp_loop, loop_dist in candidates:
-        score = _score_loop(kp_loop, K, loop_target_m)
+        score = _score_loop(kp_loop, K, loop_target_m, wind_data['speed'], wind_data['direction'])
         if score < best_score:
             best_score = score
             best_loop = kp_loop
