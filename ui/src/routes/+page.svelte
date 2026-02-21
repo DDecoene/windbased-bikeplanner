@@ -92,120 +92,108 @@
 	// --- Strava-deelafbeelding ---
 
 	function downloadImage(data: RouteResponse): void {
-		const W = 1200,
-			H = 630;
+		// Portretformaat: ideaal voor mobiele Strava-feed
+		const W = 1080,
+			H = 1350;
 		const canvas = document.createElement('canvas');
 		canvas.width = W;
 		canvas.height = H;
 		const ctx = canvas.getContext('2d')!;
+		const PAD = 52;
 
 		// Achtergrond
 		ctx.fillStyle = '#030712';
 		ctx.fillRect(0, 0, W, H);
 
-		// Linker paneel
+		// --- Header (h=90) ---
 		ctx.fillStyle = '#0c1220';
-		ctx.fillRect(0, 0, 522, H);
+		ctx.fillRect(0, 0, W, 90);
+		ctx.fillStyle = '#1e293b';
+		ctx.fillRect(0, 90, W, 1);
 
-		// Cyaan scheidingslijn
-		ctx.fillStyle = '#06b6d4';
-		ctx.fillRect(520, 0, 2, H);
-
-		// Header: RGWND
-		ctx.font = 'bold 26px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#06b6d4';
+		// Logo: "RGWND" cyaan + ".app" grijs
 		ctx.textAlign = 'left';
-		ctx.fillText('RGWND', 36, 44);
-
-		// Header separator
-		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, 62, 522, 1);
-
-		// Afstand
-		const distStr = String(data.actual_distance_km);
-		ctx.font = 'bold 108px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#f1f5f9';
-		ctx.fillText(distStr, 36, 196);
-		const distWidth = ctx.measureText(distStr).width;
-		ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
+		ctx.textBaseline = 'middle';
+		ctx.font = 'bold 34px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#06b6d4';
+		ctx.fillText('RGWND', PAD, 46);
+		const rgwndW = ctx.measureText('RGWND').width;
+		ctx.font = '34px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#334155';
-		ctx.fillText('km', 36 + distWidth + 6, 196);
+		ctx.fillText('.app', PAD + rgwndW, 46);
 
-		ctx.font = '12px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#475569';
-		ctx.fillText('AFSTAND', 38, 218);
+		// --- Stats sectie (h=220, y=91) ---
+		const statsY = 91;
+		const statsH = 220;
+		const midX = W / 2;
 
-		// Separator
+		// Cyaan scheidingslijn tussen afstand en wind
 		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(36, 236, 448, 1);
+		ctx.fillRect(midX, statsY + 30, 1, statsH - 60);
 
-		// Wind
+		// Afstand (links)
+		const distStr = String(data.actual_distance_km);
+		ctx.font = 'bold 88px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#f1f5f9';
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText(distStr, PAD, statsY + 148);
+		const distWidth = ctx.measureText(distStr).width;
+		ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#334155';
+		ctx.fillText(' km', PAD + distWidth, statsY + 148);
+		ctx.font = '13px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#475569';
+		ctx.fillText('AFSTAND', PAD, statsY + 185);
+
+		// Wind (rechts)
 		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
 		const windDir = degreesToCardinal(data.wind_conditions.direction);
+		const windX = midX + PAD;
 
-		ctx.font = 'bold 50px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#f1f5f9';
-		ctx.fillText(windKmh, 36, 304);
+		ctx.textAlign = 'left';
+		ctx.fillText(windKmh, windX, statsY + 120);
 		const wW = ctx.measureText(windKmh).width;
-		ctx.font = '22px system-ui, -apple-system, sans-serif';
+		ctx.font = '24px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#475569';
-		ctx.fillText(' km/h', 36 + wW, 304);
+		ctx.fillText(' km/h', windX + wW, statsY + 120);
 
-		ctx.font = 'bold 26px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#06b6d4';
-		ctx.fillText(windDir, 36, 342);
+		ctx.fillText(windDir, windX, statsY + 165);
 
-		ctx.font = '12px system-ui, -apple-system, sans-serif';
+		ctx.font = '13px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#475569';
-		ctx.fillText('WIND', 38, 362);
+		ctx.fillText('WIND', windX, statsY + 185);
 
 		// Windpijl
 		const arrowRot = windArrowRotation(data.wind_conditions.direction);
 		ctx.save();
-		ctx.translate(458, 310);
+		ctx.translate(W - PAD - 24, statsY + 130);
 		ctx.rotate((arrowRot * Math.PI) / 180);
 		ctx.fillStyle = '#06b6d4';
 		ctx.beginPath();
-		ctx.moveTo(0, -20);
-		ctx.lineTo(14, 0);
-		ctx.lineTo(4, 0);
-		ctx.lineTo(4, 16);
-		ctx.lineTo(-4, 16);
-		ctx.lineTo(-4, 0);
-		ctx.lineTo(-14, 0);
+		ctx.moveTo(0, -24);
+		ctx.lineTo(16, 0);
+		ctx.lineTo(5, 0);
+		ctx.lineTo(5, 20);
+		ctx.lineTo(-5, 20);
+		ctx.lineTo(-5, 0);
+		ctx.lineTo(-16, 0);
 		ctx.closePath();
 		ctx.fill();
 		ctx.restore();
 
 		// Separator
 		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(36, 382, 448, 1);
+		ctx.fillRect(0, statsY + statsH, W, 1);
 
-		// Knooppunten label
-		ctx.font = '12px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#475569';
-		ctx.fillText('ROUTE', 38, 400);
+		// --- Route schets (y=311, h=740) ---
+		const mapY = statsY + statsH + 1;
+		const mapH = 740;
 
-		// Knooppunten met regelafbreking
-		const junctionStr = data.junctions.join(' → ');
-		ctx.font = '17px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#67e8f9';
-		const words = junctionStr.split(' ');
-		let line = '';
-		let jY = 424;
-		for (const word of words) {
-			const test = line ? `${line} ${word}` : word;
-			if (ctx.measureText(test).width > 460 && line) {
-				ctx.fillText(line, 36, jY);
-				line = word;
-				jY += 26;
-			} else {
-				line = test;
-			}
-		}
-		if (line) ctx.fillText(line, 36, jY);
-
-		// Route schets (rechter paneel)
 		const allPoints: [number, number][] = data.route_geometry.flat();
 		if (allPoints.length > 1) {
 			const lats = allPoints.map((p) => p[0]);
@@ -215,30 +203,28 @@
 			const minLon = Math.min(...lons),
 				maxLon = Math.max(...lons);
 
-			// Correctie voor breedte/lengtegraad verhouding
 			const cosLat = Math.cos(((minLat + maxLat) / 2) * (Math.PI / 180));
 			const normLonRange = (maxLon - minLon) * cosLat || 0.01;
 			const normLatRange = maxLat - minLat || 0.01;
 
-			const mapX = 542,
-				mapY = 60;
-			const mapW = W - mapX - 40;
-			const mapH = H - mapY - 60;
+			const drawPad = 60;
+			const availW = W - drawPad * 2;
+			const availH = mapH - drawPad * 2;
 
-			const scale = Math.min(mapW / normLonRange, mapH / normLatRange) * 0.85;
+			const scale = Math.min(availW / normLonRange, availH / normLatRange) * 0.88;
 			const drawnW = normLonRange * scale;
 			const drawnH = normLatRange * scale;
-			const offsetX = mapX + (mapW - drawnW) / 2;
-			const offsetY = mapY + (mapH - drawnH) / 2;
+			const offsetX = drawPad + (availW - drawnW) / 2;
+			const offsetY = mapY + drawPad + (availH - drawnH) / 2;
 
 			const toX = (lon: number) => offsetX + (lon - minLon) * cosLat * scale;
 			const toY = (lat: number) => offsetY + (maxLat - lat) * scale;
 
 			// Route met glow
 			ctx.shadowColor = '#06b6d4';
-			ctx.shadowBlur = 10;
+			ctx.shadowBlur = 12;
 			ctx.strokeStyle = '#06b6d4';
-			ctx.lineWidth = 2.5;
+			ctx.lineWidth = 3;
 			ctx.lineJoin = 'round';
 			ctx.lineCap = 'round';
 
@@ -257,31 +243,68 @@
 			for (const jc of data.junction_coords) {
 				const cx = toX(jc.lon);
 				const cy = toY(jc.lat);
-				ctx.fillStyle = '#0c1220';
+				ctx.fillStyle = '#030712';
 				ctx.beginPath();
-				ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+				ctx.arc(cx, cy, 6, 0, Math.PI * 2);
 				ctx.fill();
 				ctx.strokeStyle = '#e2e8f0';
-				ctx.lineWidth = 1.5;
+				ctx.lineWidth = 2;
 				ctx.beginPath();
-				ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+				ctx.arc(cx, cy, 6, 0, Math.PI * 2);
 				ctx.stroke();
 			}
 		}
 
-		// Footer
+		// --- Knooppunten sectie (y=1052, h=210) ---
+		const juncY = mapY + mapH;
+		ctx.fillStyle = '#0c1220';
+		ctx.fillRect(0, juncY, W, 210);
 		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, H - 44, W, 1);
+		ctx.fillRect(0, juncY, W, 1);
 
-		ctx.font = '13px system-ui, -apple-system, sans-serif';
+		// Cyaan accent streep links
+		ctx.fillStyle = '#06b6d4';
+		ctx.fillRect(PAD, juncY + 28, 3, 120);
+
+		ctx.font = '12px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#475569';
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText('ROUTE', PAD + 18, juncY + 52);
+
+		const junctionStr = data.junctions.join(' → ');
+		ctx.font = '20px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#67e8f9';
+		const words = junctionStr.split(' ');
+		let line = '';
+		let jY = juncY + 82;
+		const maxJW = W - PAD * 2 - 18;
+		for (const word of words) {
+			const test = line ? `${line} ${word}` : word;
+			if (ctx.measureText(test).width > maxJW && line) {
+				ctx.fillText(line, PAD + 18, jY);
+				line = word;
+				jY += 30;
+			} else {
+				line = test;
+			}
+		}
+		if (line) ctx.fillText(line, PAD + 18, jY);
+
+		// --- Footer (y=1262, h=88) ---
+		const footY = juncY + 210;
+		ctx.fillStyle = '#1e293b';
+		ctx.fillRect(0, footY, W, 1);
+
+		ctx.font = '15px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#334155';
 		ctx.textAlign = 'left';
-		ctx.fillText('Wind-geoptimaliseerde fietsroutes · België', 36, H - 16);
+		ctx.fillText('Wind-geoptimaliseerde fietsroutes · België', PAD, footY + 50);
 
-		ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+		ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
 		ctx.fillStyle = '#06b6d4';
 		ctx.textAlign = 'right';
-		ctx.fillText('rgwnd.app', W - 36, H - 16);
+		ctx.fillText('rgwnd.app', W - PAD, footY + 50);
 
 		// Downloaden
 		const a = document.createElement('a');
