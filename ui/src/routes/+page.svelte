@@ -690,6 +690,11 @@
 					class="w-20 rounded-lg border border-gray-700 bg-gray-800 p-2 text-center text-sm text-gray-100 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				/>
 			</div>
+			{#if distanceKm >= 80}
+				<p class="mt-1.5 text-xs text-amber-500/80">
+					Lange routes (≥ 80 km) kunnen tot 30 seconden duren.
+				</p>
+			{/if}
 		</div>
 		<!-- Planned ride toggle -->
 		<div class="mb-5 rounded-lg border border-gray-700 bg-gray-800/40 p-4">
