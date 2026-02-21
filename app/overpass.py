@@ -405,17 +405,7 @@ def build_knooppunt_graph(G_full: nx.MultiDiGraph) -> nx.Graph:
                         path.append(cur)
                         cur = prev.get(cur)
                     path.reverse()
-                    # Bereken segmenten: (length, bearing) per stap in het pad
-                    # Opgeslagen in de pickle → geen SQLite-lookup nodig bij wind effort
-                    segments = []
-                    for i in range(len(path) - 1):
-                        n1, n2 = path[i], path[i + 1]
-                        if n1 in G_full.nodes and n2 in G_full.nodes:
-                            c1, c2 = G_full.nodes[n1], G_full.nodes[n2]
-                            seg_len = _haversine(c1["y"], c1["x"], c2["y"], c2["x"])
-                            seg_brng = _bearing(c1["y"], c1["x"], c2["y"], c2["x"])
-                            segments.append((seg_len, seg_brng))
-                    K.add_edge(src, node, length=dist, full_path=path, segments=segments)
+                    K.add_edge(src, node, length=dist, full_path=path)
                 continue  # Niet verder zoeken voorbij dit knooppunt
 
             # Buren verkennen

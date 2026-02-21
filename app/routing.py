@@ -75,17 +75,37 @@ def _nodes_to_polyline_from_coords(path: List[int], coords: dict[int, tuple[floa
 
 # --- Knooppunt loop: wind effort op condensed edges ---
 
-def _add_knooppunt_effort_from_segments(K: nx.Graph, wind_speed: float, wind_dir: float):
+def _add_knooppunt_effort_dynamic(K: nx.Graph, graph_mgr: GraphManager,
+                                   wind_speed: float, wind_dir: float):
     """
-    Bereken wind-effort per richting voor knooppunt-edges via pre-opgeslagen segmenten.
-    Geen SQLite-lookups — segments zijn ingebakken in de knooppunt pickle.
+    Bereken wind-effort per richting voor knooppunt-edges via SQLite lookups.
+    Gebruikt voor pre-built graph pad (geen volledige G in geheugen).
     """
+    # Verzamel alle node-paren uit full_path van alle edges
+    all_node_ids = set()
     for u, v, data in K.edges(data=True):
+        for n in data["full_path"]:
+            all_node_ids.add(n)
+
+    # Batch lookup coords
+    coords = graph_mgr.get_node_coords(list(all_node_ids))
+
+    for u, v, data in K.edges(data=True):
+        full_path = data["full_path"]
+        # Bereken effort voorwaarts
         effort_fwd = 0.0
         effort_rev = 0.0
-        for seg_len, seg_brng in data.get("segments", []):
-            effort_fwd += calculate_effort_cost(seg_len, seg_brng, wind_speed, wind_dir)
-            effort_rev += calculate_effort_cost(seg_len, (seg_brng + 180) % 360, wind_speed, wind_dir)
+        for i in range(len(full_path) - 1):
+            n1, n2 = full_path[i], full_path[i + 1]
+            c1, c2 = coords.get(n1), coords.get(n2)
+            if c1 is None or c2 is None:
+                continue
+            length = overpass._haversine(c1[0], c1[1], c2[0], c2[1])
+            bearing_fwd = overpass._bearing(c1[0], c1[1], c2[0], c2[1])
+            bearing_rev = (bearing_fwd + 180) % 360
+            effort_fwd += calculate_effort_cost(length, bearing_fwd, wind_speed, wind_dir)
+            effort_rev += calculate_effort_cost(length, bearing_rev, wind_speed, wind_dir)
+
         data["effort_fwd"] = effort_fwd
         data["effort_rev"] = effort_rev
 
@@ -246,13 +266,13 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     use_prebuilt = graph_mgr.loaded
 
     if use_prebuilt:
-        # --- Pre-built pad: volledige knooppuntgraph uit geheugen ---
+        # --- Pre-built pad: knooppuntgraph uit geheugen, lookups via SQLite ---
         logger.info("Gebruik pre-built graph (radius=%dm)", radius_m)
-        K = graph_mgr.get_knooppunt_graph()
+        K = graph_mgr.get_knooppunt_subgraph(coords[0], coords[1], radius_m)
         if K is None or K.number_of_nodes() < 3:
             raise ValueError("Te weinig knooppunten gevonden in de buurt. Probeer een ander adres of grotere afstand.")
 
-        _add_knooppunt_effort_from_segments(K, wind_data['speed'], wind_data['direction'])
+        _add_knooppunt_effort_dynamic(K, graph_mgr, wind_data['speed'], wind_data['direction'])
 
         # Approach path via klein SQLite subgraph
         start_kp_id = graph_mgr.nearest_knooppunt(coords[0], coords[1])
