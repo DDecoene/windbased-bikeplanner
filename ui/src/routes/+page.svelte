@@ -27,6 +27,7 @@
 	// Usage tracking
 	let usageInfo: UsageInfo | null = null;
 	let usageLimitReached: boolean = false;
+	let showSignupPrompt: boolean = false;
 
 	// Reset UI bij uitloggen
 	$: if (!ctx.auth.userId) {
@@ -34,6 +35,7 @@
 		errorMessage = null;
 		usageInfo = null;
 		usageLimitReached = false;
+		showSignupPrompt = false;
 		usePlannedRide = false;
 		plannedDatetime = '';
 		clearMapLayers();
@@ -478,36 +480,26 @@
 	// --- Submit ---
 
 	async function handleSubmit(): Promise<void> {
-		// Check if user is signed in
-		if (!ctx.auth.userId) {
-			// Save form state and redirect to sign-in
-			const params = new URLSearchParams();
-			params.set('address', startAddress);
-			params.set('distance', String(distanceKm));
-			if (usePlannedRide && plannedDatetime) {
-				params.set('plannedDatetime', plannedDatetime);
-			}
-			params.set('autoGenerate', 'true');
-			sessionStorage.setItem('rgwnd_pending_route', params.toString());
-			goto('/sign-in');
-			return;
-		}
-
 		isLoading = true;
 		errorMessage = null;
 		routeData = null;
+		showSignupPrompt = false;
 		startLoadingMessages();
 
 		try {
 			const dt = usePlannedRide && plannedDatetime ? plannedDatetime : null;
-			const token = await ctx.session?.getToken();
+			const token = (await ctx.session?.getToken()) ?? null;
 			const data = await generateRoute(startAddress, distanceKm, dt, token);
 			routeData = data;
 			drawRoute(data);
-			// Verbruik herladen na succesvolle route
-			await loadUsage();
+			// Verbruik herladen na succesvolle route (enkel als ingelogd)
+			if (ctx.auth.userId) await loadUsage();
 		} catch (e: any) {
-			errorMessage = e.message;
+			if (e.message?.includes('account aan')) {
+				showSignupPrompt = true;
+			} else {
+				errorMessage = e.message;
+			}
 		} finally {
 			isLoading = false;
 			stopLoadingMessages();
@@ -815,7 +807,27 @@
 	<div
 		class="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-lg backdrop-blur-sm"
 	>
-		{#if errorMessage}
+		{#if showSignupPrompt}
+			<div class="rounded-lg border border-cyan-800/50 bg-cyan-950/30 p-4">
+				<p class="mb-3 text-sm text-gray-300">
+					Je hebt 2 routes uitgeprobeerd. Maak een account aan om door te gaan.
+				</p>
+				<div class="flex gap-3">
+					<a
+						href="/sign-up"
+						class="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-cyan-400"
+					>
+						Account aanmaken
+					</a>
+					<a
+						href="/sign-in"
+						class="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
+					>
+						Inloggen
+					</a>
+				</div>
+			</div>
+		{:else if errorMessage}
 			<div class="rounded-lg border border-red-900/50 bg-red-950/40 p-4">
 				<p class="mb-2 text-sm font-semibold text-red-400">{errorMessage}</p>
 				<ul class="list-inside list-disc space-y-0.5 text-xs text-red-400/70">

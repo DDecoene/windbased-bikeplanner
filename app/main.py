@@ -11,19 +11,24 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from typing import Optional
 from fastapi_clerk_auth import HTTPAuthorizationCredentials
 
 from clerk_backend_api import Clerk
 
-from .auth import clerk_auth
+from .auth import clerk_auth, clerk_auth_optional
 from .models import RouteRequest, RouteResponse, UsageResponse
 from . import analytics, routing
 from .notify import send_alert
 # Stripe uitgeschakeld tot premium live gaat
 # from .stripe_routes import router as stripe_router
 
-# --- Gratis limiet ---
+# --- Limieten ---
 FREE_ROUTES_PER_WEEK = 50
+GUEST_ROUTES_LIMIT = 2
+
+# --- Gast-tracking: in-memory IP → {count, date} ---
+_guest_usage: dict[str, dict] = {}
 
 # --- Analytics admin IDs ---
 _admin_ids_str = os.environ.get("ANALYTICS_ADMIN_IDS", "")
@@ -82,6 +87,19 @@ app.add_middleware(
 
 
 # --- Usage tracking helpers ---
+
+def _get_guest_count(ip: str) -> int:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    entry = _guest_usage.get(ip, {})
+    return entry.get("count", 0) if entry.get("date") == today else 0
+
+def _increment_guest_count(ip: str) -> None:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    entry = _guest_usage.get(ip, {})
+    if entry.get("date") == today:
+        _guest_usage[ip] = {"date": today, "count": entry.get("count", 0) + 1}
+    else:
+        _guest_usage[ip] = {"date": today, "count": 1}
 
 def _current_iso_week() -> str:
     """Huidige ISO-week, bv. '2026-W07'."""
@@ -169,21 +187,33 @@ async def get_usage(
 async def generate_route(
     request: Request,
     route_request: RouteRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(clerk_auth),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(clerk_auth_optional),
     debug: bool = False,
 ):
-    user_id = credentials.decoded.get("sub")
-    logger.info("Route request from user %s: %s, %s km", user_id, route_request.start_address, route_request.distance_km)
-
-    # --- Usage limiet check ---
-    premium = _is_premium(credentials)
-    if not premium:
-        usage = _get_usage(user_id)
-        if usage["count"] >= FREE_ROUTES_PER_WEEK:
+    # --- Gast of ingelogde gebruiker ---
+    if credentials is None:
+        ip = get_remote_address(request)
+        if _get_guest_count(ip) >= GUEST_ROUTES_LIMIT:
             raise HTTPException(
                 status_code=403,
-                detail="Weekelijks limiet bereikt (50/50). Probeer het volgende week opnieuw.",
+                detail="Maak een account aan om meer routes te plannen.",
             )
+        user_id = f"guest:{ip}"
+        usage = None
+        premium = False
+        logger.info("Gast route: %s, %s km (IP: %s)", route_request.start_address, route_request.distance_km, ip)
+    else:
+        user_id = credentials.decoded.get("sub")
+        logger.info("Route request from user %s: %s, %s km", user_id, route_request.start_address, route_request.distance_km)
+        premium = _is_premium(credentials)
+        usage = None
+        if not premium:
+            usage = _get_usage(user_id)
+            if usage["count"] >= FREE_ROUTES_PER_WEEK:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Weekelijks limiet bereikt (50/50). Probeer het volgende week opnieuw.",
+                )
 
     planned_dt = route_request.planned_datetime
     if planned_dt is not None:
@@ -224,7 +254,9 @@ async def generate_route(
         except Exception:
             logger.warning("Analytics logging mislukt", exc_info=True)
         # Verhoog usage na succesvolle route generatie
-        if not premium:
+        if credentials is None:
+            _increment_guest_count(get_remote_address(request))
+        elif not premium and usage is not None:
             _increment_usage(user_id, usage)
         return RouteResponse(**route_data)
     except ValueError as e:

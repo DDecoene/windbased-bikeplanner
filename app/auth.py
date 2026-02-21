@@ -14,3 +14,4 @@ _clerk_jwks_url = os.environ.get(
 )
 clerk_config = ClerkConfig(jwks_url=_clerk_jwks_url)
 clerk_auth = ClerkHTTPBearer(config=clerk_config)
+clerk_auth_optional = ClerkHTTPBearer(config=clerk_config, auto_error=False)
