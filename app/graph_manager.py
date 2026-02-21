@@ -104,10 +104,8 @@ class GraphManager:
         return self._local.conn
 
     def get_knooppunt_graph(self) -> Optional[nx.Graph]:
-        """Retourneer een kopie van de knooppuntgraph voor mutatie (wind effort)."""
-        if self._K is None:
-            return None
-        return self._K.copy()
+        """Directe referentie naar de knooppuntgraph (read-only — niet muteren)."""
+        return self._K
 
     def get_knooppunt_subgraph(self, lat: float, lon: float, radius_m: float) -> Optional[nx.Graph]:
         """
