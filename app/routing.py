@@ -160,13 +160,6 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
     candidates = []
     t_start = time.perf_counter()
 
-    # Pas dieptelimiet aan voor dichte grafen (voorkom combinatorische explosie)
-    avg_degree = 2 * K.number_of_edges() / max(K.number_of_nodes(), 1)
-    if avg_degree > 10:
-        max_depth = min(max_depth, 10)
-    elif avg_degree > 6:
-        max_depth = min(max_depth, 12)
-
     # Pre-build adjacency list: geen dict-lookup per edge in de inner loop
     adj_list: dict[int, list[tuple[int, float]]] = {n: [] for n in K.nodes()}
     for u, v, data in K.edges(data=True):
@@ -339,8 +332,14 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
     best_score = float("inf")
     candidates = []
 
+    # Scale max_depth met doelafstand: gem. 4km per knooppunt-edge, +8 marge
+    # Voor 25km: 15, voor 50km: 20, voor 100km: 33, voor 150km: 46
+    max_depth = max(15, int(distance_km / 4) + 8)
+    logger.info("DFS max_depth=%d voor %.0fkm route, %d knooppunten",
+                max_depth, distance_km, K.number_of_nodes())
+
     for tol in [tolerance, tolerance + 0.1, tolerance + 0.2]:
-        candidates = _find_knooppunt_loops(K, start_kp_id, loop_target_m, tol)
+        candidates = _find_knooppunt_loops(K, start_kp_id, loop_target_m, tol, max_depth=max_depth)
         if candidates:
             break
 
