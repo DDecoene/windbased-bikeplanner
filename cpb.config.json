@@ -12,7 +12,12 @@
         ".asciidoc"
       ],
       "code": [
-        ".py"
+        ".py",
+        ".svelte",
+        ".html",
+        ".ts",
+        ".js",
+        ".css"
       ],
       "docs": [
         ".md",
