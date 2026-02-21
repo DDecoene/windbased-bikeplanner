@@ -18,6 +18,7 @@ from clerk_backend_api import Clerk
 from .auth import clerk_auth
 from .models import RouteRequest, RouteResponse, UsageResponse
 from . import analytics, routing
+from .graph_manager import GraphManager
 from .notify import send_alert
 # Stripe uitgeschakeld tot premium live gaat
 # from .stripe_routes import router as stripe_router
@@ -49,6 +50,14 @@ app = FastAPI(
     version="2.0.0",
 )
 analytics.init_db()
+
+# --- Pre-built graph laden bij startup ---
+_graph_mgr = GraphManager.get_instance()
+_graph_loaded = _graph_mgr.load()
+if _graph_loaded:
+    logger.info("Pre-built graph geladen bij startup")
+else:
+    logger.info("Geen pre-built graph — Overpass fallback actief")
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 # app.include_router(stripe_router)  # Stripe uitgeschakeld
@@ -257,7 +266,15 @@ async def generate_route(
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    gm = GraphManager.get_instance()
+    result = {"status": "ok", "graph_loaded": gm.loaded}
+    if gm.loaded and gm.metadata:
+        result["graph_metadata"] = {
+            "build_timestamp": gm.metadata.get("build_timestamp"),
+            "knooppunt_nodes": gm.metadata.get("knooppunt_nodes"),
+            "knooppunt_edges": gm.metadata.get("knooppunt_edges"),
+        }
+    return result
 
 @app.get("/")
 def read_root():

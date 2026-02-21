@@ -18,6 +18,7 @@ services:
     volumes:
       - overpass_cache:/app/overpass_cache
       - analytics_data:/app/analytics_data
+      - graph_data:/app/graph_data
     env_file:
       - .env
     mem_limit: 1536m
@@ -71,3 +72,4 @@ services:
 volumes:
   overpass_cache:
   analytics_data:
+  graph_data:

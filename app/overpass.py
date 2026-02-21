@@ -175,6 +175,76 @@ out skel qt;
     return data
 
 
+def fetch_full_belgium_rcn() -> dict:
+    """
+    Haal het volledige Belgische RCN-fietsknooppuntennetwerk op via Overpass.
+
+    Gebruikt area-filter op België (ISO3166-1=BE) i.p.v. around-radius.
+    Langere timeout (300s) en grotere maxsize (512MB) voor het hele land.
+    """
+    from .notify import send_alert
+
+    query = """
+[out:json][timeout:300][maxsize:536870912];
+// Stap 1: België als area
+area["ISO3166-1"="BE"]->.belgium;
+// Stap 2: alle RCN route-relaties in België
+rel(area.belgium)["network"="rcn"]["type"="route"]->.rels;
+// Stap 3: alle ways uit die relaties
+way(r.rels)->.ways;
+// Stap 4: alle knooppunt-nodes in België
+node(area.belgium)["rcn_ref"]->.knooppunten;
+// Stap 5: output knooppunten met tags
+.knooppunten out body;
+// Stap 6: output ways met body
+.ways out body;
+// Stap 7: resolve en output way-nodes (coords)
+.ways > ;
+out skel qt;
+"""
+
+    logger.info("Overpass query voor volledig Belgisch RCN netwerk")
+
+    max_retries = 2
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(
+                OVERPASS_URL,
+                data={"data": query},
+                headers={"User-Agent": USER_AGENT},
+                timeout=300,
+            )
+            if resp.status_code in (429, 503, 504) and attempt < max_retries:
+                logger.warning("Overpass API HTTP %d, poging %d/%d", resp.status_code, attempt + 1, max_retries + 1)
+                time.sleep(2 ** attempt)
+                continue
+            if resp.status_code != 200:
+                logger.error("Overpass API fout: HTTP %d", resp.status_code)
+                send_alert(f"Overpass API fout (full BE): HTTP {resp.status_code}")
+                resp.raise_for_status()
+            break
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt < max_retries:
+                logger.warning("Overpass API fout (poging %d/%d): %s", attempt + 1, max_retries + 1, e)
+                time.sleep(2 ** attempt)
+                continue
+            error_msg = "Overpass API timeout (full BE)" if isinstance(e, requests.Timeout) else "Overpass API onbereikbaar (full BE)"
+            logger.error("%s na %d pogingen", error_msg, max_retries + 1)
+            send_alert(f"{error_msg} na {max_retries + 1} pogingen")
+            raise ConnectionError(error_msg) from e
+
+    try:
+        data = resp.json()
+    except (json.JSONDecodeError, ValueError):
+        error_msg = f"Overpass API retourneerde ongeldig antwoord (full BE, status {resp.status_code})"
+        logger.error("%s, body: %.200s", error_msg, resp.text)
+        send_alert(error_msg)
+        raise ConnectionError(error_msg)
+
+    logger.info("Overpass full BE response: %d elementen", len(data.get("elements", [])))
+    return data
+
+
 # --- Graph builder ---
 
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
