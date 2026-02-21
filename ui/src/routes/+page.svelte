@@ -89,6 +89,207 @@
 		URL.revokeObjectURL(url);
 	}
 
+	// --- Strava-deelafbeelding ---
+
+	function downloadImage(data: RouteResponse): void {
+		const W = 1200,
+			H = 630;
+		const canvas = document.createElement('canvas');
+		canvas.width = W;
+		canvas.height = H;
+		const ctx = canvas.getContext('2d')!;
+
+		// Achtergrond
+		ctx.fillStyle = '#030712';
+		ctx.fillRect(0, 0, W, H);
+
+		// Linker paneel
+		ctx.fillStyle = '#0c1220';
+		ctx.fillRect(0, 0, 522, H);
+
+		// Cyaan scheidingslijn
+		ctx.fillStyle = '#06b6d4';
+		ctx.fillRect(520, 0, 2, H);
+
+		// Header: RGWND
+		ctx.font = 'bold 26px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#06b6d4';
+		ctx.textAlign = 'left';
+		ctx.fillText('RGWND', 36, 44);
+
+		// Header separator
+		ctx.fillStyle = '#1e293b';
+		ctx.fillRect(0, 62, 522, 1);
+
+		// Afstand
+		const distStr = String(data.actual_distance_km);
+		ctx.font = 'bold 108px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#f1f5f9';
+		ctx.fillText(distStr, 36, 196);
+		const distWidth = ctx.measureText(distStr).width;
+		ctx.font = 'bold 42px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#334155';
+		ctx.fillText('km', 36 + distWidth + 6, 196);
+
+		ctx.font = '12px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#475569';
+		ctx.fillText('AFSTAND', 38, 218);
+
+		// Separator
+		ctx.fillStyle = '#1e293b';
+		ctx.fillRect(36, 236, 448, 1);
+
+		// Wind
+		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
+		const windDir = degreesToCardinal(data.wind_conditions.direction);
+
+		ctx.font = 'bold 50px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#f1f5f9';
+		ctx.fillText(windKmh, 36, 304);
+		const wW = ctx.measureText(windKmh).width;
+		ctx.font = '22px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#475569';
+		ctx.fillText(' km/h', 36 + wW, 304);
+
+		ctx.font = 'bold 26px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#06b6d4';
+		ctx.fillText(windDir, 36, 342);
+
+		ctx.font = '12px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#475569';
+		ctx.fillText('WIND', 38, 362);
+
+		// Windpijl
+		const arrowRot = windArrowRotation(data.wind_conditions.direction);
+		ctx.save();
+		ctx.translate(458, 310);
+		ctx.rotate((arrowRot * Math.PI) / 180);
+		ctx.fillStyle = '#06b6d4';
+		ctx.beginPath();
+		ctx.moveTo(0, -20);
+		ctx.lineTo(14, 0);
+		ctx.lineTo(4, 0);
+		ctx.lineTo(4, 16);
+		ctx.lineTo(-4, 16);
+		ctx.lineTo(-4, 0);
+		ctx.lineTo(-14, 0);
+		ctx.closePath();
+		ctx.fill();
+		ctx.restore();
+
+		// Separator
+		ctx.fillStyle = '#1e293b';
+		ctx.fillRect(36, 382, 448, 1);
+
+		// Knooppunten label
+		ctx.font = '12px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#475569';
+		ctx.fillText('ROUTE', 38, 400);
+
+		// Knooppunten met regelafbreking
+		const junctionStr = data.junctions.join(' → ');
+		ctx.font = '17px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#67e8f9';
+		const words = junctionStr.split(' ');
+		let line = '';
+		let jY = 424;
+		for (const word of words) {
+			const test = line ? `${line} ${word}` : word;
+			if (ctx.measureText(test).width > 460 && line) {
+				ctx.fillText(line, 36, jY);
+				line = word;
+				jY += 26;
+			} else {
+				line = test;
+			}
+		}
+		if (line) ctx.fillText(line, 36, jY);
+
+		// Route schets (rechter paneel)
+		const allPoints: [number, number][] = data.route_geometry.flat();
+		if (allPoints.length > 1) {
+			const lats = allPoints.map((p) => p[0]);
+			const lons = allPoints.map((p) => p[1]);
+			const minLat = Math.min(...lats),
+				maxLat = Math.max(...lats);
+			const minLon = Math.min(...lons),
+				maxLon = Math.max(...lons);
+
+			// Correctie voor breedte/lengtegraad verhouding
+			const cosLat = Math.cos(((minLat + maxLat) / 2) * (Math.PI / 180));
+			const normLonRange = (maxLon - minLon) * cosLat || 0.01;
+			const normLatRange = maxLat - minLat || 0.01;
+
+			const mapX = 542,
+				mapY = 60;
+			const mapW = W - mapX - 40;
+			const mapH = H - mapY - 60;
+
+			const scale = Math.min(mapW / normLonRange, mapH / normLatRange) * 0.85;
+			const drawnW = normLonRange * scale;
+			const drawnH = normLatRange * scale;
+			const offsetX = mapX + (mapW - drawnW) / 2;
+			const offsetY = mapY + (mapH - drawnH) / 2;
+
+			const toX = (lon: number) => offsetX + (lon - minLon) * cosLat * scale;
+			const toY = (lat: number) => offsetY + (maxLat - lat) * scale;
+
+			// Route met glow
+			ctx.shadowColor = '#06b6d4';
+			ctx.shadowBlur = 10;
+			ctx.strokeStyle = '#06b6d4';
+			ctx.lineWidth = 2.5;
+			ctx.lineJoin = 'round';
+			ctx.lineCap = 'round';
+
+			for (const segment of data.route_geometry) {
+				if (segment.length < 2) continue;
+				ctx.beginPath();
+				ctx.moveTo(toX(segment[0][1]), toY(segment[0][0]));
+				for (let i = 1; i < segment.length; i++) {
+					ctx.lineTo(toX(segment[i][1]), toY(segment[i][0]));
+				}
+				ctx.stroke();
+			}
+			ctx.shadowBlur = 0;
+
+			// Knooppuntpunten
+			for (const jc of data.junction_coords) {
+				const cx = toX(jc.lon);
+				const cy = toY(jc.lat);
+				ctx.fillStyle = '#0c1220';
+				ctx.beginPath();
+				ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+				ctx.fill();
+				ctx.strokeStyle = '#e2e8f0';
+				ctx.lineWidth = 1.5;
+				ctx.beginPath();
+				ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+				ctx.stroke();
+			}
+		}
+
+		// Footer
+		ctx.fillStyle = '#1e293b';
+		ctx.fillRect(0, H - 44, W, 1);
+
+		ctx.font = '13px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#334155';
+		ctx.textAlign = 'left';
+		ctx.fillText('Wind-geoptimaliseerde fietsroutes · België', 36, H - 16);
+
+		ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+		ctx.fillStyle = '#06b6d4';
+		ctx.textAlign = 'right';
+		ctx.fillText('rgwnd.app', W - 36, H - 16);
+
+		// Downloaden
+		const a = document.createElement('a');
+		a.href = canvas.toDataURL('image/png');
+		a.download = `rgwnd-${data.actual_distance_km}km.png`;
+		a.click();
+	}
+
 	function escapeXml(s: string): string {
 		return s
 			.replace(/&/g, '&amp;')
@@ -398,10 +599,10 @@
 </script>
 
 <svelte:head>
-	<title>RGWND</title>
+	<title>RGWND | Optimaliseer je fietsknooppunten</title>
 	<meta
 		name="description"
-		content="Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
+		content="Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app. De slimme planner voor windgeoptimaliseerde fietslussen in België."
 	/>
 </svelte:head>
 
@@ -415,8 +616,8 @@
 		</h1>
 		<p class="mt-0.5 text-lg font-light tracking-[0.3em]">
 			<span class="text-gray-600">r</span><span class="text-cyan-400">u</span><span
-				class="text-gray-600">gw</span
-			><span class="text-cyan-400">i</span><span class="text-gray-600">nd</span>
+				class="text-gray-600"
+			>gw</span><span class="text-cyan-400">i</span><span class="text-gray-600">nd</span>
 		</p>
 		<p class="mt-1 text-sm text-gray-500">
 			Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk
@@ -696,28 +897,52 @@
 				</p>
 			</div>
 
-			<!-- GPX Download -->
-			<button
-				type="button"
-				on:click={() => downloadGPX(routeData!)}
-				class="flex shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="h-4 w-4"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-					stroke-width="2"
+			<!-- Downloads -->
+			<div class="flex shrink-0 gap-2">
+				<button
+					type="button"
+					on:click={() => downloadGPX(routeData!)}
+					class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-					/>
-				</svg>
-				Download GPX
-			</button>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+						/>
+					</svg>
+					Download GPX
+				</button>
+				<button
+					type="button"
+					on:click={() => downloadImage(routeData!)}
+					title="Download deelafbeelding voor Strava"
+					class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+						/>
+					</svg>
+					Deel afbeelding
+				</button>
+			</div>
 		{/if}
 
 		<!-- Map -->
