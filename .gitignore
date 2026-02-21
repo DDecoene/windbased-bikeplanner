@@ -124,3 +124,6 @@ out/
 cache_*
 .DS_Store
 certs/
+.pnpm-store/
+.claude/settings.local.json
+example_routes/

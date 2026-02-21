@@ -1,6 +1,7 @@
 {
-	"name": "RGWND — Windgeoptimaliseerde Fietsroutes",
+	"name": "RGWND — Optimaliseer je fietsknooppunten",
 	"short_name": "RGWND",
+	"description": "Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app.",
 	"start_url": "/",
 	"display": "standalone",
 	"background_color": "#030712",
@@ -14,7 +15,8 @@
 		{
 			"src": "/icon-192.png",
 			"sizes": "192x192",
-			"type": "image/png"
+			"type": "image/png",
+			"purpose": "maskable"
 		},
 		{
 			"src": "/icon-512.png",
