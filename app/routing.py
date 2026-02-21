@@ -151,6 +151,8 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
     """
     DFS-gebaseerde loop-zoeker op de knooppuntgraph.
     Vindt eenvoudige cycli vanuit start_kp binnen de afstandstolerantie.
+    Gebruikt recursieve backtracking: gedeelde mutable set/list — geen frozenset/list
+    kopieën bij elke stack-push. Path-kopie enkel bij gevonden loop (zelden).
     Stopt na time_limit seconden en retourneert wat gevonden is.
     """
     min_dist = target_m * (1 - tolerance)
@@ -165,60 +167,56 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
     elif avg_degree > 6:
         max_depth = min(max_depth, 12)
 
-    # Stack: (huidige node, bezochte set, bezocht pad, geaccumuleerde afstand)
-    stack = [(start_kp, frozenset([start_kp]), [start_kp], 0.0)]
+    # Pre-build adjacency list: geen dict-lookup per edge in de inner loop
+    adj_list: dict[int, list[tuple[int, float]]] = {n: [] for n in K.nodes()}
+    for u, v, data in K.edges(data=True):
+        adj_list[u].append((v, data["length"]))
+        adj_list[v].append((u, data["length"]))
 
-    iterations = 0
-    while stack:
-        iterations += 1
-        # Tijdslimiet check (elke 10000 iteraties om overhead te beperken)
-        if iterations % 10000 == 0 and time.perf_counter() - t_start > time_limit:
+    # Pre-compute haversine-afstand van elk knooppunt tot start: O(1) lookup
+    s_lat, s_lon = K.nodes[start_kp]["y"], K.nodes[start_kp]["x"]
+    dist_to_start: dict[int, float] = {
+        n: overpass._haversine(K.nodes[n]["y"], K.nodes[n]["x"], s_lat, s_lon)
+        for n in K.nodes()
+    }
+
+    counter = [0]  # mutable int via closure voor tijdslimiet-check
+
+    def _dfs(node: int, visited: set, path: list, dist: float) -> bool:
+        """Retourneert True als we moeten stoppen (tijdslimiet of 500 kandidaten)."""
+        counter[0] += 1
+        if counter[0] % 10000 == 0 and time.perf_counter() - t_start > time_limit:
             logger.info("DFS tijdslimiet bereikt na %.1fs, %d kandidaten, %d iteraties",
-                        time.perf_counter() - t_start, len(candidates), iterations)
-            break
+                        time.perf_counter() - t_start, len(candidates), counter[0])
+            return True
 
-        node, visited_set, visited_path, dist = stack.pop()
-
-        for neighbor in K.neighbors(node):
-            edge_len = K.edges[node, neighbor]["length"]
+        for neighbor, edge_len in adj_list[node]:
             new_dist = dist + edge_len
 
-            # Terug naar start? Check of het een geldige loop is
-            if neighbor == start_kp and len(visited_path) >= 3:
-                if min_dist <= new_dist <= max_dist:
-                    candidates.append((visited_path + [start_kp], new_dist))
-                    # Stop vroeg als we genoeg kandidaten hebben
+            if neighbor == start_kp:
+                if len(path) >= 3 and min_dist <= new_dist <= max_dist:
+                    candidates.append((path[:] + [start_kp], new_dist))
                     if len(candidates) >= 500:
                         logger.info("DFS gestopt bij 500 kandidaten na %.1fs",
                                     time.perf_counter() - t_start)
-                        return candidates
+                        return True
                 continue
 
-            # Geen revisits (eenvoudige cyclus)
-            if neighbor in visited_set:
-                continue
+            if neighbor in visited:          continue
+            if new_dist > max_dist:          continue
+            if len(path) >= max_depth:       continue
+            if new_dist + dist_to_start[neighbor] * 0.7 > max_dist: continue
 
-            # Dieptelimiet
-            if len(visited_path) >= max_depth:
-                continue
+            visited.add(neighbor)
+            path.append(neighbor)
+            if _dfs(neighbor, visited, path, new_dist):
+                return True
+            path.pop()
+            visited.remove(neighbor)
 
-            # Pruning: al te ver → skip
-            if new_dist > max_dist:
-                continue
+        return False
 
-            # Pruning: afstand terug naar start (hemelsbreed) als ondergrens
-            n_data = K.nodes[neighbor]
-            s_data = K.nodes[start_kp]
-            dist_back = overpass._haversine(
-                n_data["y"], n_data["x"], s_data["y"], s_data["x"]
-            )
-            # Hemelsbreed is altijd korter dan via het netwerk,
-            # maar we geven wat marge (factor 0.7)
-            if new_dist + dist_back * 0.7 > max_dist:
-                continue
-
-            stack.append((neighbor, visited_set | {neighbor}, visited_path + [neighbor], new_dist))
-
+    _dfs(start_kp, {start_kp}, [start_kp], 0.0)
     return candidates
 
 
