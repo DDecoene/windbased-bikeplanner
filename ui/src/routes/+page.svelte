@@ -5,6 +5,7 @@
 	import 'leaflet/dist/leaflet.css';
 	import { useClerkContext } from 'svelte-clerk';
 	import { goto } from '$app/navigation';
+	import Meta from '$lib/Meta.svelte';
 
 	import type { Map, Polyline, Marker, Circle } from 'leaflet';
 
@@ -612,11 +613,10 @@
 			nextArrowAt += interval;
 		}
 	}
-import Meta from '$lib/Meta.svelte';
 </script>
 
 <Meta
-	title="RGWND | Optimaliseer je fietsknooppunten"
+	title="RGWND | Windgeoptimaliseerde fietslussen in België"
 	description="Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app. De slimme planner voor windgeoptimaliseerde fietslussen in België."
 	path="/"
 />
