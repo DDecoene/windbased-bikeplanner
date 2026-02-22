@@ -635,7 +635,7 @@
 			<span class="text-cyan-500">rugwind</span>
 		</p>
 		<p class="mt-1 text-sm text-gray-500">
-			Ben je ook wind op kop beu? Kies voor rugwind.
+			Ben je ook wind op kop beu? Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk
 		</p>
 	</header>
 
