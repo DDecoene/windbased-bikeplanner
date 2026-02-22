@@ -28,7 +28,7 @@ fi
 
 echo "Deploying $COMMIT to $HOST:$REMOTE_DIR using key $SSH_KEY"
 
-SSH_CMD="cd $REMOTE_DIR && git fetch --all --tags && git checkout --force $COMMIT && git reset --hard $COMMIT && docker compose up --build -d --remove-orphans"
+SSH_CMD="cd $REMOTE_DIR && git fetch --all --tags && git checkout main && git reset --hard $COMMIT && docker compose up --build -d --remove-orphans"
 
 ssh -i "$SSH_KEY" "$HOST" "$SSH_CMD"
 

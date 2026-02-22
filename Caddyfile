@@ -1,7 +1,20 @@
-https://localhost {
-	tls /etc/caddy/certs/localhost.pem /etc/caddy/certs/localhost-key.pem
+rgwnd.app, www.rgwnd.app {
+	handle_path /api/* {
+		uri strip_prefix /api
+		reverse_proxy backend:8000
+	}
 
-	handle /api/* {
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
+
+# Local development fallback: use Caddy internal TLS for localhost so no
+# external cert files are required when running locally.
+localhost {
+	tls internal
+
+	handle_path /api/* {
 		uri strip_prefix /api
 		reverse_proxy backend:8000
 	}
