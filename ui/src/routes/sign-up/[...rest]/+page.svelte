@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { SignUp } from 'svelte-clerk';
+import Meta from '$lib/Meta.svelte';
 </script>
 
-<svelte:head>
-	<title>Registreren — RGWND</title>
-</svelte:head>
+<Meta title="Registreren — RGWND" description="Maak een gratis account aan bij RGWND om routes te genereren." path="/sign-up" noindex={true} />
 
 <main class="flex min-h-screen items-center justify-center p-4">
 	<div class="w-full max-w-md">

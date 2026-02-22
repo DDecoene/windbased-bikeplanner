@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -311,6 +311,39 @@ def health():
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the RGWND API. Go to /docs for documentation."}
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    """Dynamically generate a simple sitemap.xml for the public site.
+
+    Uses `SITE_URL` env var if present, otherwise defaults to https://rgwnd.app
+    """
+    site_url = os.environ.get("SITE_URL", "https://rgwnd.app").rstrip("/")
+    # Public pages to include in the sitemap
+    pages = [
+        ("/", "daily", "1.0"),
+        ("/handleiding", "monthly", "0.6"),
+        ("/contact", "monthly", "0.5"),
+        ("/privacy", "yearly", "0.3"),
+    ]
+    lastmod = datetime.now(timezone.utc).date().isoformat()
+
+    xml_parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for path, changefreq, priority in pages:
+        xml_parts.append("  <url>")
+        xml_parts.append(f"    <loc>{site_url}{path}</loc>")
+        xml_parts.append(f"    <lastmod>{lastmod}</lastmod>")
+        xml_parts.append(f"    <changefreq>{changefreq}</changefreq>")
+        xml_parts.append(f"    <priority>{priority}</priority>")
+        xml_parts.append("  </url>")
+
+    xml_parts.append("</urlset>")
+    xml = "\n".join(xml_parts)
+    return Response(content=xml, media_type="application/xml")
 
 
 # --- Analytics endpoints ---

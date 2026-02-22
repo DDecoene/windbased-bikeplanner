@@ -35,11 +35,14 @@
 			a: 'Mogelijke redenen: het gebied heeft niet genoeg verbonden fietsknooppunten, de gewenste afstand is te kort of te lang voor het lokale netwerk, of een externe dienst (Overpass, Nominatim) is tijdelijk niet beschikbaar. Probeer je afstand of startadres aan te passen.'
 		}
 	];
+import Meta from '$lib/Meta.svelte';
 </script>
 
-<svelte:head>
-	<title>Contact — RGWND</title>
-</svelte:head>
+<Meta
+	title="Contact — RGWND"
+	description="Contact en veelgestelde vragen over RGWND — windgeoptimaliseerde fietsroutes in België."
+	path="/contact"
+/>
 
 <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-8 p-6 font-sans antialiased">
 	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400"

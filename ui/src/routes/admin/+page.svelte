@@ -1,6 +1,8 @@
-<svelte:head>
-	<title>Analytics — RGWND</title>
-</svelte:head>
+import Meta from '$lib/Meta.svelte';
+
+</script>
+
+<Meta title="Analytics — RGWND" description="Privé analytics dashboard voor RGWND (admin only)." path="/admin" noindex={true} />
 
 <script lang="ts">
 	import { goto } from '$app/navigation';

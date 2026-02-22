@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { SignIn } from 'svelte-clerk';
+import Meta from '$lib/Meta.svelte';
 </script>
 
-<svelte:head>
-	<title>Inloggen — RGWND</title>
-</svelte:head>
+<Meta title="Inloggen — RGWND" description="Log in op RGWND om routes te genereren." path="/sign-in" noindex={true} />
 
 <main class="flex min-h-screen items-center justify-center p-4">
 	<div class="w-full max-w-md">

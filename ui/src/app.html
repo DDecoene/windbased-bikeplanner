@@ -12,6 +12,9 @@
 		<!-- SEO Primary -->
 		<title>RGWND | Optimaliseer je fietsknooppunten</title>
 		<meta name="description" content="Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app. De slimme planner voor windgeoptimaliseerde fietslussen in België." />
+		<meta name="robots" content="index, follow" />
+		<link rel="canonical" href="https://rgwnd.app/" />
+		<link rel="alternate" href="https://rgwnd.app/" hreflang="nl-BE" />
 
 		<!-- Open Graph / Facebook -->
 		<meta property="og:title" content="RGWND | Optimaliseer je fietsknooppunten" />
@@ -34,6 +37,29 @@
 		<meta name="twitter:image" content="https://rgwnd.app/og-image.png" />
 
 		%sveltekit.head%
+
+		<!-- Structured data: WebSite + Organization -->
+		<script type="application/ld+json">
+		{
+		  "@context": "https://schema.org",
+		  "@graph": [
+		    {
+		      "@type": "WebSite",
+		      "name": "RGWND",
+		      "url": "https://rgwnd.app/"
+		    },
+		    {
+		      "@type": "Organization",
+		      "name": "RGWND",
+		      "url": "https://rgwnd.app/",
+		      "logo": "https://rgwnd.app/icon-192.png",
+		      "sameAs": [
+		        "https://twitter.com/rgwnd"
+		      ]
+		    }
+		  ]
+		}
+		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>

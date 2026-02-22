@@ -612,15 +612,14 @@
 			nextArrowAt += interval;
 		}
 	}
+import Meta from '$lib/Meta.svelte';
 </script>
 
-<svelte:head>
-	<title>RGWND | Optimaliseer je fietsknooppunten</title>
-	<meta
-		name="description"
-		content="Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app. De slimme planner voor windgeoptimaliseerde fietslussen in België."
-	/>
-</svelte:head>
+<Meta
+	title="RGWND | Optimaliseer je fietsknooppunten"
+	description="Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app. De slimme planner voor windgeoptimaliseerde fietslussen in België."
+	path="/"
+/>
 
 <main class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
 	<!-- Header -->

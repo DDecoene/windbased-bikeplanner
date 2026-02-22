@@ -1,6 +1,11 @@
-<svelte:head>
-	<title>Handleiding — RGWND</title>
-</svelte:head>
+import Meta from '$lib/Meta.svelte';
+</script>
+
+<Meta
+	title="Handleiding — RGWND"
+	description="Stapsgewijze handleiding: hoe je windgeoptimaliseerde fietsroutes plant met RGWND via het Belgische knooppuntennetwerk."
+	path="/handleiding"
+/>
 
 <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-10 p-6 font-sans antialiased">
 	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400">&larr; Terug naar RGWND</a>
