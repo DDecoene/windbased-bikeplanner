@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+ENV = os.environ.get("ENV", "dev")
 
 # Deduplicatie: {message_hash: timestamp}
 _recent_alerts: dict[str, float] = {}
@@ -41,9 +42,10 @@ def send_alert(message: str) -> None:
 
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        env_label = "🟢 LIVE" if ENV == "production" else "🔧 DEV"
         requests.post(url, json={
             "chat_id": TELEGRAM_CHAT_ID,
-            "text": f"🚨 RGWND Alert\n\n{message}",
+            "text": f"🚨 RGWND Alert [{env_label}]\n\n{message}",
             "parse_mode": "HTML",
         }, timeout=10)
     except Exception:
