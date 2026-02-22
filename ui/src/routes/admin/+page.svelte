@@ -1,10 +1,6 @@
-import Meta from '$lib/Meta.svelte';
-
-</script>
-
-<Meta title="Analytics — RGWND" description="Privé analytics dashboard voor RGWND (admin only)." path="/admin" noindex={true} />
-
 <script lang="ts">
+	import Meta from '$lib/Meta.svelte';
+  
 	import { goto } from '$app/navigation';
 	import { useClerkContext } from 'svelte-clerk';
 	import { checkAdmin, fetchAnalytics, type AnalyticsSummary } from '$lib/api';
@@ -97,6 +93,8 @@ import Meta from '$lib/Meta.svelte';
 		return ((part / total) * 100).toFixed(1) + '%';
 	}
 </script>
+
+<Meta title="Analytics — RGWND" description="Privé analytics dashboard voor RGWND (admin only)." path="/admin" noindex={true} />
 
 <main class="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 p-6 font-sans antialiased">
 	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400">&larr; Terug naar RGWND</a

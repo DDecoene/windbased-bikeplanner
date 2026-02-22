@@ -1,11 +1,12 @@
-import Meta from '$lib/Meta.svelte';
+<script>
+	import Meta from '$lib/Meta.svelte';
 </script>
 
 <Meta
-	title="Privacybeleid — RGWND"
-	description="Privacybeleid van RGWND: welke gegevens we gebruiken, waarom en hoe we ze beschermen."
-	path="/privacy"
-/>
+		title="Privacybeleid — RGWND"
+		description="Privacybeleid van RGWND: welke gegevens we gebruiken, waarom en hoe we ze beschermen."
+		path="/privacy"
+ />
 
 <main class="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 p-6 font-sans antialiased">
 	<a href="/" class="text-sm text-gray-500 transition hover:text-cyan-400"
