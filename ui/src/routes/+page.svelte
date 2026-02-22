@@ -754,7 +754,7 @@
 		{#if usePlannedRide}
 			<div class="rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3">
 				<p class="mb-1 text-xs text-gray-500">
-					Deze route vergde meer rekenkracht dan gemiddeld.
+					Deze route vergt meer rekenkracht dan gemiddeld.
 				</p>
 				<div class="flex items-center justify-between gap-4">
 					<p class="text-xs text-gray-500">
@@ -1010,7 +1010,7 @@
 			<div class="shrink-0 rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3">
 				{#if routeData.actual_distance_km > 60}
 					<p class="mb-1 text-xs text-gray-500">
-						Deze route vergde meer rekenkracht dan gemiddeld.
+						Deze route vergt meer rekenkracht dan gemiddeld.
 					</p>
 				{/if}
 				<div class="flex items-center justify-between gap-4">
