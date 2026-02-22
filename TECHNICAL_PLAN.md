@@ -81,6 +81,7 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 | 23 | Planned ride (future date/time) | ✅ Done | Pick a date/time up to 16 days ahead, route optimized for forecasted wind. Free for all users (no gating). |
 | 24 | Free tier usage tracking | ✅ Done | 50 routes/week fair use (was 3, relaxed for launch). Usage stored in Clerk privateMetadata, premium check via JWT public_metadata claim. |
 | 25 | Stripe subscription | 🔧 Dormant | Code implemented (`app/stripe_routes.py`, `app/auth.py`), but router disabled in main.py. Pricing page removed. Will re-enable when user base grows. |
+| 28 | Donation prompt | ✅ Done | Inline block after successful route generation. Links to buymeacoffee.com/dennisdecoene. Extra context line shown for routes >60km. No popup, no feature gating. |
 | 26 | iOS native app | ⏳ Planned | SwiftUI + MapKit. Backend API-first architecture already supports it. Requires Apple Developer Program (€99/yr). |
 
 ### #23 — Planned Ride: Implementation Notes
@@ -201,3 +202,4 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 - [x] Provision Hetzner CX23 VPS and deploy — live at https://rgwnd.app
 - [x] Add self-hosted analytics (`app/analytics.py`, SQLite, admin dashboard at `/admin`)
 - [x] Add `ANALYTICS_ADMIN_IDS` env var for admin access control
+- [x] Add donation prompt after successful route generation (Buy Me a Coffee, voluntary, no feature gating)

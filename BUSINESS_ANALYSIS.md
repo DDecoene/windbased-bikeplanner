@@ -24,6 +24,13 @@ Komoot was acquired by **Bending Spoons** (known for aggressive monetization). T
 
 ## Revenue Models
 
+### 0. Donations (current bridge, pre-ondernemingsnummer)
+- Voluntary only — no feature access, no rewards, no gating
+- Inline prompt after successful route generation (Buy Me a Coffee: buymeacoffee.com/dennisdecoene)
+- Extra context shown for computationally heavy routes (>60km)
+- Purpose: cover infrastructure costs, validate willingness to pay, build early supporters
+- Will be disabled once a formal paid tier is introduced
+
 ### 1. Freemium Subscription (primary)
 - **Free tier (current)**: 50 routes/week fair use (tracked via Clerk metadata, ISO week reset), all features accessible
 - **Premium** (planned, €1.99/mo or €14.99/yr): Unlimited routes, advanced preferences (headwind avoidance intensity, scenic preferences), route history

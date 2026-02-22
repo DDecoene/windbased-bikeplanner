@@ -983,6 +983,28 @@
 					Deel afbeelding
 				</button>
 			</div>
+
+			<!-- Donatie -->
+			<div class="shrink-0 rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3">
+				{#if routeData.actual_distance_km > 60}
+					<p class="mb-1 text-xs text-gray-500">
+						Deze route vergde meer rekenkracht dan gemiddeld.
+					</p>
+				{/if}
+				<div class="flex items-center justify-between gap-4">
+					<p class="text-xs text-gray-500">
+						Vind je RGWND nuttig? Je kan het project vrijwillig steunen.
+					</p>
+					<a
+						href="https://buymeacoffee.com/dennisdecoene"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="shrink-0 rounded-md border border-gray-700 bg-gray-800/60 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-yellow-600/50 hover:text-yellow-400"
+					>
+						☕ Steun RGWND
+					</a>
+				</div>
+			</div>
 		{/if}
 
 		<!-- Map -->
