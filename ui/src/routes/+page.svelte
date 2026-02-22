@@ -751,6 +751,27 @@
 			{/if}
 		</div>
 
+		{#if usePlannedRide}
+			<div class="rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3">
+				<p class="mb-1 text-xs text-gray-500">
+					Deze route vergde meer rekenkracht dan gemiddeld.
+				</p>
+				<div class="flex items-center justify-between gap-4">
+					<p class="text-xs text-gray-500">
+						Vind je RGWND nuttig? Je kan het project vrijwillig steunen.
+					</p>
+					<a
+						href="https://buymeacoffee.com/dennisdecoene"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="shrink-0 rounded-md border border-gray-700 bg-gray-800/60 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-yellow-600/50 hover:text-yellow-400"
+					>
+						☕ Steun RGWND
+					</a>
+				</div>
+			</div>
+		{/if}
+
 		<button
 			type="submit"
 			class="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:from-cyan-400 hover:to-blue-500 hover:shadow-cyan-500/25 focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-950 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
@@ -985,8 +1006,9 @@
 			</div>
 
 			<!-- Donatie -->
+			{#if !routeData.planned_datetime}
 			<div class="shrink-0 rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3">
-				{#if routeData.actual_distance_km > 60 || routeData.planned_datetime}
+				{#if routeData.actual_distance_km > 60}
 					<p class="mb-1 text-xs text-gray-500">
 						Deze route vergde meer rekenkracht dan gemiddeld.
 					</p>
@@ -1005,6 +1027,7 @@
 					</a>
 				</div>
 			</div>
+			{/if}
 		{/if}
 
 		<!-- Map -->
