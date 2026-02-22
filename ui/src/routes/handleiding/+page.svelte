@@ -40,8 +40,14 @@
 			<h2 class="text-lg font-semibold text-gray-200">Wat is RGWND?</h2>
 		</div>
 		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">
+			<div class="mb-4 flex items-center gap-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
+				<span class="font-mono text-lg font-bold text-gray-500">rgwnd</span>
+				<span class="text-gray-700">=</span>
+				<span class="text-lg font-bold text-cyan-400">rugwind</span>
+				<span class="ml-1 text-gray-500">— wind in de rug</span>
+			</div>
 			<p>
-				RGWND (uitgesproken: <span class="text-gray-200">rugwind</span>) is een fietsrouteplanner die lusroutes genereert via het Belgische <span class="text-gray-200">fietsknooppuntennetwerk</span>. In tegenstelling tot gewone routeplanners houdt RGWND rekening met de actuele windrichting: de route wordt zo samengesteld dat je de langere of zwaardere stukken <span class="text-cyan-400">met de wind mee</span> fietst.
+				RGWND is een fietsrouteplanner die lusroutes genereert via het Belgische <span class="text-gray-200">fietsknooppuntennetwerk</span>. In tegenstelling tot gewone routeplanners houdt RGWND rekening met de actuele windrichting: de route wordt zo samengesteld dat je de langere of zwaardere stukken <span class="text-cyan-400">met de wind mee</span> fietst.
 			</p>
 			<p class="mt-3">
 				Het resultaat is een lus die begint en eindigt op je startpunt, waarbij je de route kunt volgen via de vertrouwde knooppuntbordjes.

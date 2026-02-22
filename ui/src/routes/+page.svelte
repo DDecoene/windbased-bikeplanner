@@ -617,7 +617,7 @@
 
 <Meta
 	title="RGWND | Windgeoptimaliseerde fietslussen in België"
-	description="Ben je ook wind op kop beu? Optimaliseer je fietsknooppunten met rgwnd.app. De slimme planner voor windgeoptimaliseerde fietslussen in België."
+	description="rgwnd = rugwind. Ben je ook wind op kop beu? De slimme planner voor windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
 	path="/"
 />
 
@@ -629,13 +629,13 @@
 		>
 			RGWND
 		</h1>
-		<p class="mt-0.5 text-lg font-light tracking-[0.3em]">
-			<span class="text-gray-600">r</span><span class="text-cyan-400">u</span><span
-				class="text-gray-600"
-			>gw</span><span class="text-cyan-400">i</span><span class="text-gray-600">nd</span>
+		<p class="mt-1 text-sm text-gray-500">
+			<span class="font-mono text-gray-600">rgwnd</span>
+			<span class="mx-1 text-gray-700">=</span>
+			<span class="text-cyan-500">rugwind</span>
 		</p>
 		<p class="mt-1 text-sm text-gray-500">
-			Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk
+			Ben je ook wind op kop beu? Kies voor rugwind.
 		</p>
 	</header>
 
