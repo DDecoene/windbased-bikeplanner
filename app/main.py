@@ -26,7 +26,7 @@ from .notify import send_alert
 
 # --- Limieten ---
 FREE_ROUTES_PER_WEEK = 50
-GUEST_ROUTES_LIMIT = 2
+GUEST_ROUTES_LIMIT = 1
 
 # --- Gast-tracking: in-memory IP → {count, date} ---
 _guest_usage: dict[str, dict] = {}
