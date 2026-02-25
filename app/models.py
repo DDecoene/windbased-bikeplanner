@@ -58,4 +58,5 @@ class RouteResponse(BaseModel):
     wind_conditions: WindData
     planned_datetime: Optional[str] = Field(None, description="ISO datetime if this route was planned for a future time")
     message: str
+    is_guest_route_2: bool = Field(False, description="True if this is the 2nd free guest route")
     debug_data: Optional[DebugData] = None

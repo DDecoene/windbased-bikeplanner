@@ -495,6 +495,10 @@
 			drawRoute(data);
 			// Verbruik herladen na succesvolle route (enkel als ingelogd)
 			if (ctx.auth.userId) await loadUsage();
+			// Show signup CTA after successful 2nd guest route
+			if (data.is_guest_route_2) {
+				showSignupPrompt = true;
+			}
 		} catch (e: any) {
 			if (e.message?.includes('account aan')) {
 				showSignupPrompt = true;
