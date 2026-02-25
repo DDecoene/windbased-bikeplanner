@@ -82,6 +82,7 @@ Hetzner CX23 (2 vCPU, 4GB RAM, ~€3.62/mo, Nuremberg) + Docker Compose + Caddy 
 | 24 | Free tier usage tracking | ✅ Done | 50 routes/week fair use (was 3, relaxed for launch). Usage stored in Clerk privateMetadata, premium check via JWT public_metadata claim. |
 | 25 | Stripe subscription | 🔧 Dormant | Code implemented (`app/stripe_routes.py`, `app/auth.py`), but router disabled in main.py. Pricing page removed. Will re-enable when user base grows. |
 | 28 | Donation prompt | ✅ Done | Inline block after successful route generation. Links to buymeacoffee.com/dennisdecoene. Extra context line shown for routes >60km. No popup, no feature gating. |
+| 29 | Address autocomplete | ✅ Done | Photon API (photon.komoot.io) with 300ms debounce, min 3 chars. Dropdown with 6 Belgian address suggestions, keyboard nav (arrows/enter/escape), click-outside closes. Frontend-only, no backend changes. |
 | 26 | iOS native app | ⏳ Planned | SwiftUI + MapKit. Backend API-first architecture already supports it. Requires Apple Developer Program (€99/yr). |
 
 ### #23 — Planned Ride: Implementation Notes

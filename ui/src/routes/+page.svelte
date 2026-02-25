@@ -30,17 +30,27 @@
 	let usageLimitReached: boolean = false;
 	let showSignupPrompt: boolean = false;
 
+	// Address autocomplete
+	let suggestions: Array<{ display: string; lat: number; lon: number }> = $state([]);
+	let showSuggestions = $state(false);
+	let suggestionLoading = $state(false);
+	let highlightedIndex = $state(-1);
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let suggestAbortController: AbortController | null = null;
+
 	// Reset UI bij uitloggen
-	$: if (!ctx.auth.userId) {
-		routeData = null;
-		errorMessage = null;
-		usageInfo = null;
-		usageLimitReached = false;
-		showSignupPrompt = false;
-		usePlannedRide = false;
-		plannedDatetime = '';
-		clearMapLayers();
-	}
+	$effect(() => {
+		if (!ctx.auth.userId) {
+			routeData = null;
+			errorMessage = null;
+			usageInfo = null;
+			usageLimitReached = false;
+			showSignupPrompt = false;
+			usePlannedRide = false;
+			plannedDatetime = '';
+			clearMapLayers();
+		}
+	});
 
 	// Map layers
 	let mapContainer: HTMLDivElement;
@@ -409,6 +419,98 @@
 		loadingMessage = '';
 	}
 
+	// --- Address Autocomplete ---
+
+	async function handleAddressInput(e: Event) {
+		const val = (e.target as HTMLInputElement).value;
+		startAddress = val;
+		highlightedIndex = -1;
+
+		if (debounceTimer) clearTimeout(debounceTimer);
+		if (suggestAbortController) suggestAbortController.abort();
+
+		if (val.trim().length < 3) {
+			suggestions = [];
+			showSuggestions = false;
+			return;
+		}
+
+		debounceTimer = setTimeout(async () => {
+			suggestionLoading = true;
+			suggestAbortController = new AbortController();
+			try {
+				const params = new URLSearchParams({
+					q: val,
+					limit: '6',
+					bbox: '2.5,49.4,6.4,51.6'
+				});
+				// Add layer parameters separately (Photon requires repeated params, not comma-separated)
+				for (const layer of ['house', 'street', 'locality', 'city', 'district']) {
+					params.append('layer', layer);
+				}
+				const res = await fetch(`https://photon.komoot.io/api/?${params}`, {
+					signal: suggestAbortController.signal
+				});
+				if (!res.ok) throw new Error('suggest failed');
+				const data = await res.json();
+				suggestions = data.features
+					.map((f: any) => {
+						const p = f.properties;
+						const parts = [
+							p.name,
+							p.street && p.housenumber ? `${p.street} ${p.housenumber}` : p.street,
+							p.postcode,
+							p.city
+						].filter(Boolean);
+						return {
+							display: [...new Set(parts)].join(', '),
+							lat: f.geometry.coordinates[1],
+							lon: f.geometry.coordinates[0]
+						};
+					})
+					.filter((s: any) => s.display);
+				showSuggestions = suggestions.length > 0;
+			} catch (e: any) {
+				if (e.name !== 'AbortError') suggestions = [];
+			} finally {
+				suggestionLoading = false;
+			}
+		}, 300);
+	}
+
+	function selectSuggestion(s: { display: string; lat: number; lon: number }) {
+		startAddress = s.display;
+		suggestions = [];
+		showSuggestions = false;
+		// Ensure input is updated and focused
+		const input = document.getElementById('address') as HTMLInputElement;
+		if (input) {
+			input.value = s.display;
+			input.focus();
+		}
+	}
+
+	function handleAddressKeydown(e: KeyboardEvent) {
+		if (!showSuggestions) return;
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			highlightedIndex = Math.min(highlightedIndex + 1, suggestions.length - 1);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			highlightedIndex = Math.max(highlightedIndex - 1, -1);
+		} else if (e.key === 'Enter' && highlightedIndex >= 0) {
+			e.preventDefault();
+			selectSuggestion(suggestions[highlightedIndex]);
+		} else if (e.key === 'Escape') {
+			showSuggestions = false;
+		}
+	}
+
+	function handleWindowClick(e: MouseEvent) {
+		const wrapper = document.getElementById('address-wrapper');
+		if (wrapper && !wrapper.contains(e.target as Node)) showSuggestions = false;
+	}
+
 	// --- Map ---
 
 	async function loadUsage(): Promise<void> {
@@ -432,6 +534,9 @@
 			// Laad usage info als ingelogd
 			setTimeout(() => loadUsage(), 500);
 
+			// Add click-outside listener for autocomplete dropdown
+			window.addEventListener('click', handleWindowClick);
+
 			// Check for pending route after sign-in redirect
 			const pendingRoute = sessionStorage.getItem('rgwnd_pending_route');
 			if (pendingRoute) {
@@ -452,6 +557,11 @@
 					}, 1000);
 				}
 			}
+
+			// Cleanup listener on unmount
+			return () => {
+				window.removeEventListener('click', handleWindowClick);
+			};
 		}
 	});
 
@@ -648,17 +758,43 @@
 		on:submit|preventDefault={handleSubmit}
 		class="shrink-0 rounded-xl border border-gray-800 bg-gray-900/80 p-5 shadow-lg backdrop-blur-sm"
 	>
-		<div class="mb-4">
+		<div class="relative mb-4" id="address-wrapper">
 			<label for="address" class="mb-1.5 block text-sm font-medium text-gray-400">Startadres</label>
-			<input
-				type="text"
-				id="address"
-				bind:value={startAddress}
-				disabled={isLoading}
-				class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-				placeholder="bv. Grote Markt, Brugge"
-				required
-			/>
+			<div class="relative">
+				<input
+					type="text"
+					id="address"
+					bind:value={startAddress}
+					on:input={handleAddressInput}
+					on:keydown={handleAddressKeydown}
+					disabled={isLoading}
+					class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					placeholder="bv. Grote Markt, Brugge"
+					required
+				/>
+				{#if suggestionLoading}
+					<div class="absolute right-2.5 top-1/2 -translate-y-1/2">
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-cyan-500"></div>
+					</div>
+				{/if}
+			</div>
+			{#if showSuggestions}
+				<ul class="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+					{#each suggestions as s, i}
+						<li>
+							<button
+								type="button"
+								class="w-full px-3 py-2 text-left text-sm transition {i === highlightedIndex
+									? 'bg-cyan-500/20 text-cyan-300'
+									: 'text-gray-200 hover:bg-gray-800'}"
+								on:click={() => selectSuggestion(s)}
+							>
+								{s.display}
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 		<div class="mb-5">
 			<label for="distance" class="mb-1.5 block text-sm font-medium text-gray-400">
@@ -1040,7 +1176,7 @@
 		<!-- Map -->
 		<div
 			bind:this={mapContainer}
-			class="aspect-square w-full overflow-hidden rounded-lg ring-1 ring-gray-800"
+			class="h-80 w-full overflow-hidden rounded-lg ring-1 ring-gray-800 md:aspect-square"
 		></div>
 	</div>
 </main>
