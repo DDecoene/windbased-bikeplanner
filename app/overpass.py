@@ -88,6 +88,11 @@ def _write_cache(key: str, data: dict) -> None:
     path = CACHE_DIR / f"{key}.json"
     with open(path, "w") as f:
         json.dump(data, f)
+    # Restrict cache file permissions to owner only
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        logger.warning("Kon cachbestand permissions niet instellen: %s", path)
     _cleanup_cache()
 
 

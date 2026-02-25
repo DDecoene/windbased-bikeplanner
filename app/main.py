@@ -90,12 +90,21 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["authorization", "content-type"],
 )
 
 
 # --- Usage tracking helpers ---
+
+def _cleanup_guest_usage() -> None:
+    """Remove stale guest usage entries (older than 2 days)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    to_remove = [ip for ip, entry in _guest_usage.items() if entry.get("date") != today]
+    for ip in to_remove:
+        del _guest_usage[ip]
+    if to_remove:
+        logger.debug("Cleaned up %d stale guest usage entries", len(to_remove))
 
 def _get_guest_count(ip: str) -> int:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -109,6 +118,9 @@ def _increment_guest_count(ip: str) -> None:
         _guest_usage[ip] = {"date": today, "count": entry.get("count", 0) + 1}
     else:
         _guest_usage[ip] = {"date": today, "count": 1}
+    # Cleanup every 100 increments to prevent unbounded growth
+    if sum(1 for _ in _guest_usage) % 100 == 0:
+        _cleanup_guest_usage()
 
 def _current_iso_week() -> str:
     """Huidige ISO-week, bv. '2026-W07'."""
@@ -155,8 +167,8 @@ def _get_usage(user_id: str) -> dict:
             return {"week": week, "count": 0}
         return {"week": week, "count": usage.get("count", 0)}
     except Exception as e:
-        logger.error("Fout bij ophalen usage voor %s: %s — toegang geblokkeerd", user_id, e)
-        send_alert(f"Clerk usage ophalen mislukt voor {user_id}: {e}")
+        logger.error("Clerk API error (usage): %s", type(e).__name__, exc_info=True)
+        send_alert("Clerk API error: Fout bij ophalen usage — toegang geblokkeerd")
         return {"week": _current_iso_week(), "count": FREE_ROUTES_PER_WEEK}
 
 
@@ -168,8 +180,8 @@ def _increment_usage(user_id: str, current_usage: dict) -> None:
         new_usage = {"week": current_usage["week"], "count": current_usage["count"] + 1}
         clerk_client.users.update(user_id=user_id, private_metadata={"usage": new_usage})
     except Exception as e:
-        logger.error("Fout bij updaten usage voor %s: %s", user_id, e)
-        send_alert(f"Clerk usage updaten mislukt voor {user_id}: {e}")
+        logger.error("Clerk API error (update usage): %s", type(e).__name__, exc_info=True)
+        send_alert("Clerk API error: Fout bij updaten usage")
 
 
 @app.get("/usage", response_model=UsageResponse)
@@ -400,4 +412,15 @@ async def analytics_summary(
     """Haal analytics-samenvatting op (alleen voor admins)."""
     if not _is_admin(credentials):
         raise HTTPException(status_code=403, detail="Geen toegang.")
+
+    # Validate date format
+    for date_str in [start, end]:
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=422,
+                detail="Datum moet in YYYY-MM-DD formaat zijn."
+            )
+
     return analytics.get_summary(start_date=start, end_date=end)

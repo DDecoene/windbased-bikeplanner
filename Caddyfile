@@ -1,4 +1,11 @@
 rgwnd.app, www.rgwnd.app {
+	# Security headers
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header X-Frame-Options "DENY"
+	header X-Content-Type-Options "nosniff"
+	header X-XSS-Protection "1; mode=block"
+	header Referrer-Policy "no-referrer-when-downgrade"
+
 	handle_path /api/* {
 		uri strip_prefix /api
 		reverse_proxy backend:8000
@@ -13,6 +20,13 @@ rgwnd.app, www.rgwnd.app {
 # external cert files are required when running locally.
 localhost {
 	tls internal
+
+	# Security headers
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header X-Frame-Options "DENY"
+	header X-Content-Type-Options "nosniff"
+	header X-XSS-Protection "1; mode=block"
+	header Referrer-Policy "no-referrer-when-downgrade"
 
 	handle_path /api/* {
 		uri strip_prefix /api
