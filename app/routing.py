@@ -10,6 +10,22 @@ from .graph_manager import GraphManager
 
 logger = logging.getLogger(__name__)
 
+# --- U-turn penalty (rode kwaliteit) ---
+_UTURN_THRESHOLD_DEG = 150  # hoeken > 150° zijn scherpe bochten
+_UTURN_PENALTY_FRACTION = 0.25  # elke U-turn leidt tot +25% van totale effort
+
+
+# --- Bearing & Geometry ---
+
+def _bearing_deg(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Richting in graden (0–360) van punt 1 naar punt 2."""
+    import math
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dlam = math.radians(lon2 - lon1)
+    x = math.sin(dlam) * math.cos(phi2)
+    y = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(dlam)
+    return math.degrees(math.atan2(x, y)) % 360
+
 
 # --- Wind Effort Calculation ---
 def calculate_effort_cost(length: float, bearing: float, wind_speed: float, wind_direction: float) -> float:
@@ -216,7 +232,7 @@ def _find_knooppunt_loops(K: nx.Graph, start_kp: int, target_m: float,
 def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
     """
     Score een knooppunt-loop: lagere score = beter.
-    Combineert wind-effort met afstandsafwijking.
+    Combineert wind-effort met afstandsafwijking en bestraft U-turns.
     """
     total_effort = 0.0
     total_length = 0.0
@@ -230,8 +246,25 @@ def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
         else:
             total_effort += edge["effort_rev"]
 
+    # Penalty voor scherpe bochten / U-turns
+    uturn_penalty = 0.0
+    for i in range(1, len(kp_loop) - 1):
+        prev_n = kp_loop[i - 1]
+        curr_n = kp_loop[i]
+        next_n = kp_loop[i + 1]
+        pd = K.nodes[prev_n]
+        cd = K.nodes[curr_n]
+        nd = K.nodes[next_n]
+        brg_in = _bearing_deg(pd['y'], pd['x'], cd['y'], cd['x'])
+        brg_out = _bearing_deg(cd['y'], cd['x'], nd['y'], nd['x'])
+        angle_change = abs(brg_out - brg_in)
+        if angle_change > 180:
+            angle_change = 360 - angle_change
+        if angle_change > _UTURN_THRESHOLD_DEG:
+            uturn_penalty += total_effort * _UTURN_PENALTY_FRACTION
+
     distance_penalty = abs(total_length - target_m) * 5
-    return total_effort + distance_penalty
+    return total_effort + distance_penalty + uturn_penalty
 
 
 # --- Hoofdfunctie ---
