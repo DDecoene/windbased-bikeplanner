@@ -13,7 +13,7 @@
 	const ctx = useClerkContext();
 
 	// Form state
-	let startAddress: string = 'Grote Markt, Bruges, Belgium';
+	let startAddress: string = '';
 	let distanceKm: number = 45;
 	let plannedDatetime: string = '';
 	let usePlannedRide: boolean = false;
