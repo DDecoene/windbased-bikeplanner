@@ -263,10 +263,16 @@ async def generate_route(
         except Exception:
             logger.warning("Analytics logging mislukt", exc_info=True)
         # Verhoog usage na succesvolle route generatie
+        is_guest_route_2 = False
         if credentials is None:
             _increment_guest_count(get_remote_address(request))
+            # Set flag if this is the 2nd guest route
+            if _get_guest_count(get_remote_address(request)) == GUEST_ROUTES_LIMIT:
+                is_guest_route_2 = True
         elif not premium and usage is not None:
             _increment_usage(user_id, usage)
+
+        route_data["is_guest_route_2"] = is_guest_route_2
         return RouteResponse(**route_data)
     except ValueError as e:
         analytics.log_route_event(
