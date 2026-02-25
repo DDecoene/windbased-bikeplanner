@@ -36,6 +36,20 @@ pnpm lint            # prettier --check
 
 ### No tests exist yet. No Python linter configured.
 
+## Development Workflow
+
+**Branching & Merging**
+- `main` — production branch, deploy from here only
+- `dev/graph` — backend/performance work (DFS optimization, pre-built graph, overpass changes)
+- `dev/frontend` — UI/UX work (styling, copy, features)
+- **Always merge via Pull Request** — never rebase or force-push to main. Create a clean branch from `main`, work locally, push, and open a PR for review/merge.
+- Routing/algorithm changes → `dev/graph`; visual/UI changes → `dev/frontend`
+- Keep branches focused on one feature/fix
+
+**Commits**
+- No `Co-Authored-By` trailer — commit as yourself
+- Write clear, descriptive commit messages (imperative mood: "add", "fix", "improve")
+
 ## Architecture
 
 **Backend (`app/`)**
