@@ -829,8 +829,11 @@
 	>
 		{#if showSignupPrompt}
 			<div class="rounded-lg border border-cyan-800/50 bg-cyan-950/30 p-4">
-				<p class="mb-3 text-sm text-gray-300">
-					Je hebt 2 routes uitgeprobeerd. Maak een account aan om door te gaan.
+				<p class="mb-1 text-sm font-medium text-gray-100">
+					Bevalt je RGWND?
+				</p>
+				<p class="mb-3 text-sm text-gray-400">
+					Meld je aan voor onbeperkte fietsroutes geoptimaliseerd naar de wind.
 				</p>
 				<div class="flex gap-3">
 					<a
