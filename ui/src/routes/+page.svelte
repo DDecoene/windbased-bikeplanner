@@ -837,7 +837,7 @@
 					Bevalt je RGWND?
 				</p>
 				<p class="mb-3 text-sm text-gray-400">
-					Meld je aan voor onbeperkte fietsroutes geoptimaliseerd naar de wind.
+					Meld je aan en krijg 50 fietsroutes per week geoptimaliseerd naar de wind.
 				</p>
 				<div class="flex gap-3">
 					<a
