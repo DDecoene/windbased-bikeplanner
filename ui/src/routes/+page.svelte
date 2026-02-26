@@ -30,6 +30,15 @@
 	let usageLimitReached: boolean = false;
 	let showSignupPrompt: boolean = false;
 
+	// Address autocomplete state (isolated from route data)
+	let suggestions: Array<{ display: string; lat: number; lon: number }> = [];
+	let showSuggestions: boolean = false;
+	let suggestionLoading: boolean = false;
+	let highlightedIndex: number = -1;
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let suggestAbortController: AbortController | null = null;
+	let addressInputElement: HTMLInputElement | null = null;
+
 	// Reset UI bij uitloggen
 	$: if (!ctx.auth.userId) {
 		routeData = null;
@@ -39,6 +48,7 @@
 		showSignupPrompt = false;
 		usePlannedRide = false;
 		plannedDatetime = '';
+		showSuggestions = false;
 		clearMapLayers();
 	}
 
@@ -409,6 +419,104 @@
 		loadingMessage = '';
 	}
 
+	// --- Address Autocomplete ---
+
+	async function handleAddressInput(e: Event) {
+		const val = (e.target as HTMLInputElement).value;
+		startAddress = val;
+		highlightedIndex = -1;
+
+		if (debounceTimer) clearTimeout(debounceTimer);
+		if (suggestAbortController) suggestAbortController.abort();
+
+		if (val.trim().length < 3) {
+			suggestions = [];
+			showSuggestions = false;
+			return;
+		}
+
+		suggestionLoading = true;
+		suggestAbortController = new AbortController();
+
+		debounceTimer = setTimeout(async () => {
+			try {
+				const params = new URLSearchParams({
+					q: val,
+					limit: '6',
+					bbox: '2.5,49.4,6.4,51.6'
+				});
+				for (const layer of ['house', 'street', 'locality', 'city', 'district']) {
+					params.append('layer', layer);
+				}
+				const res = await fetch(`https://photon.komoot.io/api/?${params}`, {
+					signal: suggestAbortController.signal
+				});
+				if (!res.ok) throw new Error('suggest failed');
+				const data = await res.json();
+				suggestions = data.features
+					.map((f: any) => {
+						const p = f.properties;
+						const parts = [
+							p.name,
+							p.street && p.housenumber ? `${p.street} ${p.housenumber}` : p.street,
+							p.postcode,
+							p.city
+						].filter(Boolean);
+						return {
+							display: [...new Set(parts)].join(', '),
+							lat: f.geometry.coordinates[1],
+							lon: f.geometry.coordinates[0]
+						};
+					})
+					.filter((s: any) => s.display);
+				showSuggestions = suggestions.length > 0;
+			} catch (e: any) {
+				if (e.name !== 'AbortError') suggestions = [];
+			} finally {
+				suggestionLoading = false;
+			}
+		}, 300);
+	}
+
+	function selectSuggestion(s: { display: string; lat: number; lon: number }) {
+		startAddress = s.display;
+		suggestions = [];
+		showSuggestions = false;
+		if (addressInputElement) {
+			addressInputElement.focus();
+		}
+	}
+
+	function handleAddressKeydown(e: KeyboardEvent) {
+		if (!showSuggestions) return;
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			highlightedIndex = Math.min(highlightedIndex + 1, suggestions.length - 1);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			highlightedIndex = Math.max(highlightedIndex - 1, -1);
+		} else if (e.key === 'Enter' && highlightedIndex >= 0) {
+			e.preventDefault();
+			selectSuggestion(suggestions[highlightedIndex]);
+		} else if (e.key === 'Escape') {
+			showSuggestions = false;
+		}
+	}
+
+	function closeSuggestionsOnClickOutside(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		const addressWrapper = document.getElementById('address-wrapper');
+		const portal = document.getElementById('autocomplete-portal');
+		if (
+			addressWrapper &&
+			!addressWrapper.contains(target) &&
+			portal &&
+			!portal.contains(target)
+		) {
+			showSuggestions = false;
+		}
+	}
+
 	// --- Map ---
 
 	async function loadUsage(): Promise<void> {
@@ -485,6 +593,7 @@
 		errorMessage = null;
 		routeData = null;
 		showSignupPrompt = false;
+		showSuggestions = false;
 		startLoadingMessages();
 
 		try {
@@ -648,17 +757,27 @@
 		on:submit|preventDefault={handleSubmit}
 		class="shrink-0 rounded-xl border border-gray-800 bg-gray-900/80 p-5 shadow-lg backdrop-blur-sm"
 	>
-		<div class="mb-4">
+		<div class="mb-4" id="address-wrapper">
 			<label for="address" class="mb-1.5 block text-sm font-medium text-gray-400">Startadres</label>
-			<input
-				type="text"
-				id="address"
-				bind:value={startAddress}
-				disabled={isLoading}
-				class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-				placeholder="bv. Grote Markt, Brugge"
-				required
-			/>
+			<div class="relative">
+				<input
+					type="text"
+					id="address"
+					bind:this={addressInputElement}
+					bind:value={startAddress}
+					on:input={handleAddressInput}
+					on:keydown={handleAddressKeydown}
+					disabled={isLoading}
+					class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					placeholder="bv. Grote Markt, Brugge"
+					required
+				/>
+				{#if suggestionLoading}
+					<div class="absolute right-2.5 top-1/2 -translate-y-1/2">
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-cyan-500"></div>
+					</div>
+				{/if}
+			</div>
 		</div>
 		<div class="mb-5">
 			<label for="distance" class="mb-1.5 block text-sm font-medium text-gray-400">
@@ -1052,3 +1171,38 @@
 	<span class="mx-2">·</span>
 	<a href="/contact" class="transition hover:text-gray-400">Contact</a>
 </footer>
+
+<!-- Autocomplete Portal (isolated from form layout) -->
+<div id="autocomplete-portal">
+	{#if showSuggestions && suggestions.length > 0}
+		<!-- Portal positioned near address input -->
+		<div
+			class="fixed z-50"
+			style="top: {addressInputElement
+				? addressInputElement.getBoundingClientRect().bottom + 8 + 'px'
+				: 'auto'}; left: {addressInputElement
+				? addressInputElement.getBoundingClientRect().left + 'px'
+				: 'auto'}; width: {addressInputElement
+				? addressInputElement.getBoundingClientRect().width + 'px'
+				: 'auto'};"
+		>
+			<ul class="overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+				{#each suggestions as s, i}
+					<li>
+						<button
+							type="button"
+							class="w-full px-3 py-2 text-left text-sm transition {i === highlightedIndex
+								? 'bg-cyan-500/20 text-cyan-300'
+								: 'text-gray-200 hover:bg-gray-800'}"
+							on:click={() => selectSuggestion(s)}
+						>
+							{s.display}
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
+</div>
+
+<svelte:window on:click={closeSuggestionsOnClickOutside} />
