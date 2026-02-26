@@ -597,6 +597,7 @@
 		errorMessage = null;
 		routeData = null;
 		showGuestLimitCta = false;
+		isGuestRoute = false;
 		showSuggestions = false;
 		startLoadingMessages();
 
@@ -604,16 +605,17 @@
 			const dt = usePlannedRide && plannedDatetime ? plannedDatetime : null;
 			const token = (await ctx.session?.getToken()) ?? null;
 			const data = await generateRoute(startAddress, distanceKm, dt, token);
+
+			// Track if this is a guest route
+			isGuestRoute = !token;
+
 			routeData = data;
 			drawRoute(data);
 			// Verbruik herladen na succesvolle route (enkel als ingelogd)
 			if (ctx.auth.userId) await loadUsage();
-			// Show signup CTA after successful 2nd guest route
-			if (data.is_guest_route_2) {
-				showGuestLimitCta = true;
-			}
 		} catch (e: any) {
-			if (e.message?.includes('account aan')) {
+			// Hard block: guest exceeded limit (3rd+ attempt)
+			if (e.message?.includes('account aan') && !ctx.auth.userId) {
 				showGuestLimitCta = true;
 			} else {
 				errorMessage = e.message;
