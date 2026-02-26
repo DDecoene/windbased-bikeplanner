@@ -28,7 +28,10 @@
 	// Usage tracking
 	let usageInfo: UsageInfo | null = null;
 	let usageLimitReached: boolean = false;
-	let showSignupPrompt: boolean = false;
+
+	// Guest limit CTA tracking
+	let showGuestLimitCta: boolean = false; // Hard block on 3rd+ attempts
+	let isGuestRoute: boolean = false; // Track if current route is from a guest user
 
 	// Address autocomplete state (isolated from route data)
 	let suggestions: Array<{ display: string; lat: number; lon: number }> = [];
@@ -45,7 +48,8 @@
 		errorMessage = null;
 		usageInfo = null;
 		usageLimitReached = false;
-		showSignupPrompt = false;
+		showGuestLimitCta = false;  // Add this line
+		isGuestRoute = false;        // Add this line
 		usePlannedRide = false;
 		plannedDatetime = '';
 		showSuggestions = false;
