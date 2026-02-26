@@ -959,10 +959,10 @@
 		{#if showGuestLimitCta}
 			<div class="rounded-lg border border-cyan-800/50 bg-cyan-950/30 p-4">
 				<p class="mb-1 text-sm font-medium text-gray-100">
-					Bevalt je RGWND?
+					Je hebt je 2 gratis routes gebruikt.
 				</p>
 				<p class="mb-3 text-sm text-gray-400">
-					Meld je aan en krijg 50 fietsroutes per week geoptimaliseerd naar de wind.
+					Meld je aan voor onbeperkt fietsroutes geoptimaliseerd naar de wind.
 				</p>
 				<div class="flex gap-3">
 					<a
