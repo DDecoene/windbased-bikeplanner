@@ -31,6 +31,7 @@ export interface RouteResponse {
 	wind_conditions: WindData;
 	planned_datetime: string | null;
 	message: string;
+	is_guest_route_2: boolean;
 	debug_data?: any;
 }
 
