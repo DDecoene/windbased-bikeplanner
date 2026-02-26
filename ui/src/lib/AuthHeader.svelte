@@ -18,6 +18,12 @@
 	</SignedIn>
 	<SignedOut>
 		<a
+			href="/sign-up"
+			class="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-cyan-400"
+		>
+			Registreer
+		</a>
+		<a
 			href="/sign-in"
 			class="rounded-lg border border-gray-700 bg-gray-900/80 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
 		>
