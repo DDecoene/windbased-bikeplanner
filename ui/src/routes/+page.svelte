@@ -1160,6 +1160,32 @@
 				</div>
 			</div>
 			{/if}
+
+			<!-- Soft CTA: 2nd guest route (show results + CTA below) -->
+			{#if routeData.is_guest_route_2 && isGuestRoute && !ctx.auth.userId}
+				<div class="shrink-0 rounded-lg border border-cyan-800/50 bg-cyan-950/30 p-4">
+					<p class="mb-1 text-sm font-medium text-gray-100">
+						Bevalt je RGWND?
+					</p>
+					<p class="mb-3 text-sm text-gray-400">
+						Meld je aan en krijg 50 fietsroutes per week geoptimaliseerd naar de wind.
+					</p>
+					<div class="flex gap-3">
+						<a
+							href="/sign-up"
+							class="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-cyan-400"
+						>
+							Account aanmaken
+						</a>
+						<a
+							href="/sign-in"
+							class="rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
+						>
+							Inloggen
+						</a>
+					</div>
+				</div>
+			{/if}
 		{/if}
 
 		<!-- Map -->
