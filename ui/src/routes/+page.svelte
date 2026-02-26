@@ -596,7 +596,7 @@
 		isLoading = true;
 		errorMessage = null;
 		routeData = null;
-		showSignupPrompt = false;
+		showGuestLimitCta = false;
 		showSuggestions = false;
 		startLoadingMessages();
 
@@ -610,11 +610,11 @@
 			if (ctx.auth.userId) await loadUsage();
 			// Show signup CTA after successful 2nd guest route
 			if (data.is_guest_route_2) {
-				showSignupPrompt = true;
+				showGuestLimitCta = true;
 			}
 		} catch (e: any) {
 			if (e.message?.includes('account aan')) {
-				showSignupPrompt = true;
+				showGuestLimitCta = true;
 			} else {
 				errorMessage = e.message;
 			}
@@ -954,7 +954,7 @@
 	<div
 		class="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-lg backdrop-blur-sm"
 	>
-		{#if showSignupPrompt}
+		{#if showGuestLimitCta}
 			<div class="rounded-lg border border-cyan-800/50 bg-cyan-950/30 p-4">
 				<p class="mb-1 text-sm font-medium text-gray-100">
 					Bevalt je RGWND?
