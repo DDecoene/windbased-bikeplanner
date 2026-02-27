@@ -45,7 +45,7 @@ Write a detailed implementation plan to `/tmp/claude-plan.md` with this structur
 [Brief description of the task and any relevant codebase context]
 
 ## Instructions
-- You are working on the windbased-bikeplanner project
+- You are working on the rgwnd project
 - Do NOT use AskUserQuestion — all decisions have been made below
 - Do NOT use EnterPlanMode — just implement directly
 - All frontend text must be in Dutch

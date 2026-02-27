@@ -25,7 +25,7 @@ If there are uncommitted changes, stop and tell the user to commit or stash firs
 Run all deployment steps in a single SSH command:
 
 ```bash
-ssh rgwnd 'cd /root/windbased-bikeplanner && git pull && docker compose up --build -d --remove-orphans 2>&1'
+ssh rgwnd 'cd /opt/rgwnd && git pull && docker compose up --build -d --remove-orphans 2>&1'
 ```
 
 The SSH host alias `rgwnd` must be configured in `~/.ssh/config`. If the connection fails, inform the user and suggest they check their SSH config or VPN.
