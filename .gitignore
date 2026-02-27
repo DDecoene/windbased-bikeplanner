@@ -130,3 +130,4 @@ certs/
 example_routes/
 graph_data/
 docker-compose.override.yml
+.worktrees/
