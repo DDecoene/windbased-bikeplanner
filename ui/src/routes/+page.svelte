@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { RouteResponse, UsageInfo } from '$lib/api';
-	import { generateRoute, fetchUsage } from '$lib/api';
+	import { generateRoute, fetchUsage, downloadGpx, downloadImage } from '$lib/api';
 	import 'leaflet/dist/leaflet.css';
 	import { useClerkContext } from 'svelte-clerk';
 	import { goto } from '$app/navigation';
@@ -65,280 +65,6 @@
 	let startMarker: Marker | null = null;
 	let searchCircle: Circle | null = null;
 
-	// --- GPX Export ---
-
-	function downloadGPX(data: RouteResponse): void {
-		const now = new Date().toISOString();
-		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
-		const windDir = degreesToCardinal(data.wind_conditions.direction);
-		const windLabel = data.planned_datetime ? 'Voorspelde wind' : 'Wind';
-		const plannedNote = data.planned_datetime
-			? ` Gepland: ${new Date(data.planned_datetime).toLocaleString('nl-BE')}.`
-			: '';
-
-		let gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="RGWND" xmlns="http://www.topografix.com/GPX/1/1">
-  <metadata>
-    <name>${escapeXml(data.start_address)} — ${data.actual_distance_km} km</name>
-    <desc>${windLabel}: ${windKmh} km/h ${windDir}. Knooppunten: ${data.junctions.join(' → ')}${plannedNote}</desc>
-    <time>${now}</time>
-  </metadata>
-`;
-
-		for (const jc of data.junction_coords) {
-			gpx += `  <wpt lat="${jc.lat}" lon="${jc.lon}"><name>Knooppunt ${escapeXml(jc.ref)}</name></wpt>\n`;
-		}
-
-		gpx += `  <trk>\n    <name>${escapeXml(data.start_address)}</name>\n    <trkseg>\n`;
-		for (const segment of data.route_geometry) {
-			for (const [lat, lon] of segment) {
-				gpx += `      <trkpt lat="${lat}" lon="${lon}"></trkpt>\n`;
-			}
-		}
-		gpx += `    </trkseg>\n  </trk>\n</gpx>`;
-
-		const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `rgwnd-${data.actual_distance_km}km.gpx`;
-		a.click();
-		URL.revokeObjectURL(url);
-	}
-
-	// --- Strava-deelafbeelding ---
-
-	function downloadImage(data: RouteResponse): void {
-		// Vierkant formaat: universeel compatibel, nooit afgesneden in Strava
-		const W = 1080,
-			H = 1080;
-		const canvas = document.createElement('canvas');
-		canvas.width = W;
-		canvas.height = H;
-		const ctx = canvas.getContext('2d')!;
-		const PAD = 52;
-
-		// Zones: header=72, stats=128, map=720, junctions=100, footer=60  (totaal=1080)
-		const HEADER_H = 72;
-		const STATS_H = 128;
-		const MAP_H = 720;
-		const JUNC_H = 100;
-		// FOOTER_H = 60
-
-		// Achtergrond
-		ctx.fillStyle = '#030712';
-		ctx.fillRect(0, 0, W, H);
-
-		// --- Header ---
-		ctx.fillStyle = '#0c1220';
-		ctx.fillRect(0, 0, W, HEADER_H);
-		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, HEADER_H, W, 1);
-
-		// Logo: "RGWND" cyaan + ".app" grijs
-		ctx.textAlign = 'left';
-		ctx.textBaseline = 'middle';
-		ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#06b6d4';
-		ctx.fillText('RGWND', PAD, HEADER_H / 2);
-		const rgwndW = ctx.measureText('RGWND').width;
-		ctx.font = '32px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#334155';
-		ctx.fillText('.app', PAD + rgwndW, HEADER_H / 2);
-
-		// --- Stats rij ---
-		const statsY = HEADER_H + 1;
-		const midX = W / 2;
-
-		// Cyaan scheidingslijn
-		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(midX, statsY + 16, 1, STATS_H - 32);
-
-		// Afstand (links)
-		const distStr = String(data.actual_distance_km);
-		ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#f1f5f9';
-		ctx.textAlign = 'left';
-		ctx.textBaseline = 'alphabetic';
-		ctx.fillText(distStr, PAD, statsY + 92);
-		const distWidth = ctx.measureText(distStr).width;
-		ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#334155';
-		ctx.fillText(' km', PAD + distWidth, statsY + 92);
-		ctx.font = '12px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#475569';
-		ctx.fillText('AFSTAND', PAD, statsY + 114);
-
-		// Wind (rechts)
-		const windKmh = (data.wind_conditions.speed * 3.6).toFixed(1);
-		const windDir = degreesToCardinal(data.wind_conditions.direction);
-		const windX = midX + PAD;
-
-		ctx.font = 'bold 44px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#f1f5f9';
-		ctx.textAlign = 'left';
-		ctx.fillText(windKmh, windX, statsY + 60);
-		const wW = ctx.measureText(windKmh).width;
-		ctx.font = '20px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#475569';
-		ctx.fillText(' km/h', windX + wW, statsY + 60);
-
-		ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#06b6d4';
-		ctx.fillText(windDir, windX, statsY + 95);
-		ctx.font = '12px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#475569';
-		ctx.fillText('WIND', windX, statsY + 114);
-
-		// Windpijl
-		const arrowRot = windArrowRotation(data.wind_conditions.direction);
-		ctx.save();
-		ctx.translate(W - PAD - 20, statsY + 64);
-		ctx.rotate((arrowRot * Math.PI) / 180);
-		ctx.fillStyle = '#06b6d4';
-		ctx.beginPath();
-		ctx.moveTo(0, -20);
-		ctx.lineTo(14, 0);
-		ctx.lineTo(4, 0);
-		ctx.lineTo(4, 16);
-		ctx.lineTo(-4, 16);
-		ctx.lineTo(-4, 0);
-		ctx.lineTo(-14, 0);
-		ctx.closePath();
-		ctx.fill();
-		ctx.restore();
-
-		// Separator
-		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, statsY + STATS_H, W, 1);
-
-		// --- Route schets ---
-		const mapY = statsY + STATS_H + 1;
-
-		const allPoints: [number, number][] = data.route_geometry.flat();
-		if (allPoints.length > 1) {
-			const lats = allPoints.map((p) => p[0]);
-			const lons = allPoints.map((p) => p[1]);
-			const minLat = Math.min(...lats),
-				maxLat = Math.max(...lats);
-			const minLon = Math.min(...lons),
-				maxLon = Math.max(...lons);
-
-			const cosLat = Math.cos(((minLat + maxLat) / 2) * (Math.PI / 180));
-			const normLonRange = (maxLon - minLon) * cosLat || 0.01;
-			const normLatRange = maxLat - minLat || 0.01;
-
-			const drawPad = 56;
-			const availW = W - drawPad * 2;
-			const availH = MAP_H - drawPad * 2;
-
-			const scale = Math.min(availW / normLonRange, availH / normLatRange) * 0.88;
-			const drawnW = normLonRange * scale;
-			const drawnH = normLatRange * scale;
-			const offsetX = drawPad + (availW - drawnW) / 2;
-			const offsetY = mapY + drawPad + (availH - drawnH) / 2;
-
-			const toX = (lon: number) => offsetX + (lon - minLon) * cosLat * scale;
-			const toY = (lat: number) => offsetY + (maxLat - lat) * scale;
-
-			ctx.shadowColor = '#06b6d4';
-			ctx.shadowBlur = 12;
-			ctx.strokeStyle = '#06b6d4';
-			ctx.lineWidth = 3;
-			ctx.lineJoin = 'round';
-			ctx.lineCap = 'round';
-
-			for (const segment of data.route_geometry) {
-				if (segment.length < 2) continue;
-				ctx.beginPath();
-				ctx.moveTo(toX(segment[0][1]), toY(segment[0][0]));
-				for (let i = 1; i < segment.length; i++) {
-					ctx.lineTo(toX(segment[i][1]), toY(segment[i][0]));
-				}
-				ctx.stroke();
-			}
-			ctx.shadowBlur = 0;
-
-			for (const jc of data.junction_coords) {
-				const cx = toX(jc.lon);
-				const cy = toY(jc.lat);
-				ctx.fillStyle = '#030712';
-				ctx.beginPath();
-				ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-				ctx.fill();
-				ctx.strokeStyle = '#e2e8f0';
-				ctx.lineWidth = 2;
-				ctx.beginPath();
-				ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-				ctx.stroke();
-			}
-		}
-
-		// --- Knooppunten strip ---
-		const juncY = mapY + MAP_H;
-		ctx.fillStyle = '#0c1220';
-		ctx.fillRect(0, juncY, W, JUNC_H);
-		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, juncY, W, 1);
-
-		ctx.fillStyle = '#06b6d4';
-		ctx.fillRect(PAD, juncY + 18, 3, JUNC_H - 36);
-
-		ctx.font = '11px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#475569';
-		ctx.textAlign = 'left';
-		ctx.textBaseline = 'alphabetic';
-		ctx.fillText('ROUTE', PAD + 14, juncY + 36);
-
-		const junctionStr = data.junctions.join(' → ');
-		ctx.font = '18px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#67e8f9';
-		const words = junctionStr.split(' ');
-		let line = '';
-		let jY = juncY + 62;
-		const maxJW = W - PAD * 2 - 14;
-		for (const word of words) {
-			const test = line ? `${line} ${word}` : word;
-			if (ctx.measureText(test).width > maxJW && line) {
-				ctx.fillText(line, PAD + 14, jY);
-				line = word;
-				jY += 24;
-			} else {
-				line = test;
-			}
-		}
-		if (line) ctx.fillText(line, PAD + 14, jY);
-
-		// --- Footer ---
-		const footY = juncY + JUNC_H;
-		ctx.fillStyle = '#1e293b';
-		ctx.fillRect(0, footY, W, 1);
-
-		ctx.font = '13px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#334155';
-		ctx.textAlign = 'left';
-		ctx.fillText('Wind-geoptimaliseerde fietsroutes · België', PAD, footY + 38);
-
-		ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
-		ctx.fillStyle = '#06b6d4';
-		ctx.textAlign = 'right';
-		ctx.fillText('rgwnd.app', W - PAD, footY + 38);
-
-		// Downloaden
-		const a = document.createElement('a');
-		a.href = canvas.toDataURL('image/png');
-		a.download = `rgwnd-${data.actual_distance_km}km.png`;
-		a.click();
-	}
-
-	function escapeXml(s: string): string {
-		return s
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;');
-	}
-
 	// --- Helpers ---
 
 	const CARDINAL_DIRS = [
@@ -371,6 +97,32 @@
 
 	function windArrowRotation(directionDeg: number): number {
 		return (directionDeg + 180) % 360;
+	}
+
+	// --- Export handlers ---
+
+	let exportError: string | null = null;
+
+	async function handleDownloadGPX(): Promise<void> {
+		if (!routeData?.route_id) return;
+		exportError = null;
+		try {
+			const token = (await ctx.session?.getToken()) ?? null;
+			await downloadGpx(routeData.route_id, token);
+		} catch (e: any) {
+			exportError = e.message;
+		}
+	}
+
+	async function handleDownloadImage(): Promise<void> {
+		if (!routeData?.route_id) return;
+		exportError = null;
+		try {
+			const token = (await ctx.session?.getToken()) ?? null;
+			await downloadImage(routeData.route_id, token);
+		} catch (e: any) {
+			exportError = e.message;
+		}
 	}
 
 	// --- Planned ride helpers ---
@@ -658,7 +410,7 @@
 
 		// Start marker (emerald)
 		const startIcon = L.divIcon({
-			html: `<div style="background:#10b981;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid rgba(255,255,255,0.3);box-shadow:0 0 12px rgba(16,185,129,0.5);">S</div>`,
+			html: `<div class="flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-white/30 bg-emerald-500 text-[13px] font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]">S</div>`,
 			className: '',
 			iconSize: [30, 30],
 			iconAnchor: [15, 15]
@@ -670,7 +422,7 @@
 		// Junction markers
 		for (const jc of data.junction_coords) {
 			const icon = L.divIcon({
-				html: `<div style="background:rgba(6,182,212,0.9);color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid rgba(255,255,255,0.2);box-shadow:0 0 8px rgba(6,182,212,0.4);">${jc.ref}</div>`,
+				html: `<div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/20 bg-cyan-500/90 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(6,182,212,0.4)]">${jc.ref}</div>`,
 				className: '',
 				iconSize: [24, 24],
 				iconAnchor: [12, 12]
@@ -1094,7 +846,7 @@
 			<div class="flex shrink-0 gap-2">
 				<button
 					type="button"
-					on:click={() => downloadGPX(routeData!)}
+					on:click={handleDownloadGPX}
 					class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
 				>
 					<svg
@@ -1115,7 +867,7 @@
 				</button>
 				<button
 					type="button"
-					on:click={() => downloadImage(routeData!)}
+					on:click={handleDownloadImage}
 					title="Download deelafbeelding voor Strava"
 					class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
 				>
@@ -1136,6 +888,9 @@
 					Deel afbeelding
 				</button>
 			</div>
+			{#if exportError}
+				<p class="text-xs text-red-400">{exportError}</p>
+			{/if}
 
 			<!-- Donatie -->
 			{#if !routeData.planned_datetime}

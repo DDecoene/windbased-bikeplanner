@@ -59,4 +59,5 @@ class RouteResponse(BaseModel):
     planned_datetime: Optional[str] = Field(None, description="ISO datetime if this route was planned for a future time")
     message: str
     is_guest_route_2: bool = Field(False, description="True if this is the 2nd free guest route")
+    route_id: Optional[str] = Field(None, description="Unique ID for export endpoints (15 min TTL)")
     debug_data: Optional[DebugData] = None

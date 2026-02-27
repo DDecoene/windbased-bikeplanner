@@ -190,19 +190,19 @@
 				<p class="text-xs font-medium uppercase tracking-wide text-gray-500">Betrouwbaarheid voorspelling</p>
 				<div class="flex flex-col gap-1.5 text-xs">
 					<div class="flex items-center gap-2">
-						<span class="rounded px-2 py-0.5 font-medium" style="background:rgba(16,185,129,0.15);color:#10b981">Hoog</span>
+						<span class="rounded bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-500">Hoog</span>
 						<span>Binnen 48 uur — zeer betrouwbaar.</span>
 					</div>
 					<div class="flex items-center gap-2">
-						<span class="rounded px-2 py-0.5 font-medium" style="background:rgba(6,182,212,0.15);color:#06b6d4">Goed</span>
+						<span class="rounded bg-cyan-500/15 px-2 py-0.5 font-medium text-cyan-500">Goed</span>
 						<span>2–5 dagen — doorgaans betrouwbaar.</span>
 					</div>
 					<div class="flex items-center gap-2">
-						<span class="rounded px-2 py-0.5 font-medium" style="background:rgba(234,179,8,0.15);color:#eab308">Matig</span>
+						<span class="rounded bg-yellow-500/15 px-2 py-0.5 font-medium text-yellow-500">Matig</span>
 						<span>5–10 dagen — globale richting klopt, details onzeker.</span>
 					</div>
 					<div class="flex items-center gap-2">
-						<span class="rounded px-2 py-0.5 font-medium" style="background:rgba(249,115,22,0.15);color:#f97316">Laag</span>
+						<span class="rounded bg-orange-500/15 px-2 py-0.5 font-medium text-orange-500">Laag</span>
 						<span>Meer dan 10 dagen — beschouw als ruwe indicatie.</span>
 					</div>
 				</div>

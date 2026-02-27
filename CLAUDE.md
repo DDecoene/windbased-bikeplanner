@@ -53,7 +53,7 @@ pnpm lint            # prettier --check
 ## Architecture
 
 **Backend (`app/`)**
-- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required) and `GET /usage` (usage tracking). Fair use: 50 routes/week via Clerk privateMetadata, premium via JWT public_metadata claim. Fail-closed on Clerk API errors (blocks + Telegram alert). CORS hardened: `allow_methods=["GET", "POST", "OPTIONS"]`, `allow_headers=["authorization", "content-type"]` (configurable via `CORS_ORIGINS` env var). Rate-limited to 10 req/min per IP via slowapi. Guest route tracking per IP per day (2 free routes), with periodic cleanup. Structured logging configured here; Clerk exceptions sanitized (generic messages in alerts). Analytics: `POST /analytics/pageview` (no auth, 60/min rate limit), `GET /analytics/check-admin` (auth), `GET /analytics/summary` (admin only, date validation). Admin access controlled via `ANALYTICS_ADMIN_IDS` env var.
+- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required) and `GET /usage` (usage tracking). Export endpoints: `GET /routes/{route_id}/gpx` (30/min) and `GET /routes/{route_id}/image` (10/min) — both auth optional, return file downloads from cached route data. Fair use: 50 routes/week via Clerk privateMetadata, premium via JWT public_metadata claim. Fail-closed on Clerk API errors (blocks + Telegram alert). CORS hardened: `allow_methods=["GET", "POST", "OPTIONS"]`, `allow_headers=["authorization", "content-type"]` (configurable via `CORS_ORIGINS` env var). Rate-limited to 10 req/min per IP via slowapi. Guest route tracking per IP per day (2 free routes), with periodic cleanup. Structured logging configured here; Clerk exceptions sanitized (generic messages in alerts). Analytics: `POST /analytics/pageview` (no auth, 60/min rate limit), `GET /analytics/check-admin` (auth), `GET /analytics/summary` (admin only, date validation). Admin access controlled via `ANALYTICS_ADMIN_IDS` env var.
 - `auth.py` — Shared Clerk JWT auth config (extracted to avoid circular imports between main.py and stripe_routes.py).
 - `stripe_routes.py` — Stripe subscription endpoints (checkout, portal, webhook). Currently disabled in main.py — will be re-enabled when premium goes live.
 - `routing.py` — Core algorithm: geocode → fetch wind → build full RCN graph → build condensed knooppunt graph → DFS loop finder with distance-budget pruning → wind-effort scoring → expand to full geometry.
@@ -61,6 +61,9 @@ pnpm lint            # prettier --check
 - `weather.py` — Nominatim geocoding (24h TTL cache), Open-Meteo real-time wind (10min TTL cache), and `get_forecast_wind_data()` for planned rides (1h TTL cache, hourly forecast up to 16 days). All with retry (2 retries, exponential backoff).
 - `models.py` — Pydantic models including JunctionCoord, start_coords, search_radius_km, UsageResponse. `start_address` max 200 chars. Optional `planned_datetime` for future ride planning.
 - `analytics.py` — SQLite analytics store (`analytics_data/analytics.db`). Two tables: `page_views` (path, referrer, UTM params) and `route_events` (user_id, distance, duration, timings, status). Thread-safe (per-thread connections, WAL mode). Functions: `init_db()`, `log_pageview()`, `log_route_event()`, `get_summary(start, end)` with aggregated metrics. Docker volume `analytics_data` persists data.
+- `route_cache.py` — In-memory TTL cache (15 min) for route export endpoints. Stores route data keyed by UUID4 `route_id`. Piggyback cleanup on access.
+- `gpx.py` — GPX XML generation from route data. Used by `GET /routes/{route_id}/gpx`. Cardinal direction conversion, XML escaping via stdlib.
+- `image_gen.py` — Cairo-based 1080x1080 PNG image generation (Strava sharing style). Used by `GET /routes/{route_id}/image`. Requires pycairo + system libcairo2-dev.
 - `notify.py` — Telegram alerting (Bot API). Silent no-op if `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` env vars not set. 5-minute deduplication.
 
 **Frontend (`ui/`)**
@@ -78,11 +81,11 @@ pnpm lint            # prettier --check
 - `src/routes/privacy/+page.svelte` — Privacy policy (Clerk auth disclosure, third-party API disclosure, anonymous pageview tracking disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
 - `src/routes/handleiding/+page.svelte` — Dutch user manual: 6-step guide (account, form, results, GPX, planned ride, tips). Linked from footer and callout on homepage.
-- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token, `fetchUsage()` for usage tracking, `checkAdmin()` and `fetchAnalytics()` for admin dashboard. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy). Stripe functions removed (dormant).
+- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token, `fetchUsage()` for usage tracking, `checkAdmin()` and `fetchAnalytics()` for admin dashboard, `downloadGpx()` and `downloadImage()` for backend export endpoints. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy). Stripe functions removed (dormant).
 - `src/app.html` — Static OG/Twitter meta tags (Dutch, `og:locale=nl_BE`). PWA manifest + theme-color.
 
 **Docker**
-- `Dockerfile` — Python 3.12-slim backend, fixes volume permissions at startup, runs as `appuser`.
+- `Dockerfile` — Python 3.12-slim backend with `libcairo2-dev` for pycairo image generation, fixes volume permissions at startup, runs as `appuser`.
 - `ui/Dockerfile` — Node 22-slim multi-stage frontend build, non-root `appuser`. `VITE_API_URL` defaults to `/api`.
 - `Caddyfile` — HTTPS reverse proxy: `/api/*` → strip prefix → backend:8000, everything else → frontend:3000. Security headers: HSTS, X-Frame-Options (DENY), X-Content-Type-Options (nosniff), X-XSS-Protection, Referrer-Policy. Local dev: Caddy internal TLS for localhost. Production: `rgwnd.app` domain + Let's Encrypt auto-SSL.
 - `docker-compose.yml` — caddy:443 (128MB/0.25CPU), backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volumes for overpass_cache and analytics_data. Backend/frontend ports not exposed directly (Caddy proxies).

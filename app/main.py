@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -19,6 +19,9 @@ from clerk_backend_api import Clerk
 from .auth import clerk_auth, clerk_auth_optional
 from .models import RouteRequest, RouteResponse, UsageResponse
 from . import analytics, routing
+from . import route_cache
+from . import gpx as gpx_module
+from . import image_gen
 from .graph_manager import GraphManager
 from .notify import send_alert
 # Stripe uitgeschakeld tot premium live gaat
@@ -92,6 +95,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["authorization", "content-type"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -285,6 +289,17 @@ async def generate_route(
             _increment_usage(user_id, usage)
 
         route_data["is_guest_route_2"] = is_guest_route_2
+
+        # Cache for export endpoints
+        route_id = route_cache.store(
+            route_data=route_data,
+            wind_data={
+                "speed": route_data["wind_conditions"]["speed"],
+                "direction": route_data["wind_conditions"]["direction"],
+            },
+        )
+        route_data["route_id"] = route_id
+
         return RouteResponse(**route_data)
     except ValueError as e:
         analytics.log_route_event(
@@ -313,6 +328,48 @@ async def generate_route(
         logger.error("Unexpected error in /generate-route: %s", e, exc_info=True)
         send_alert(f"500 error in /generate-route: {e}")
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+@app.get("/routes/{route_id}/gpx")
+@limiter.limit("30/minute")
+async def download_gpx(
+    request: Request,
+    route_id: str = Path(..., min_length=32, max_length=32, pattern="^[0-9a-f]{32}$"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(clerk_auth_optional),
+):
+    """Download route as GPX file."""
+    cached = route_cache.get(route_id)
+    if cached is None:
+        raise HTTPException(status_code=404, detail="Route verlopen of niet gevonden. Genereer een nieuwe route.")
+
+    gpx_xml = gpx_module.generate_gpx(cached["route_data"], cached["wind_data"])
+    dist = cached["route_data"].get("actual_distance_km", "route")
+    return Response(
+        content=gpx_xml,
+        media_type="application/gpx+xml",
+        headers={"Content-Disposition": f'attachment; filename="rgwnd-{dist}km.gpx"'},
+    )
+
+
+@app.get("/routes/{route_id}/image")
+@limiter.limit("10/minute")
+async def download_image(
+    request: Request,
+    route_id: str = Path(..., min_length=32, max_length=32, pattern="^[0-9a-f]{32}$"),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(clerk_auth_optional),
+):
+    """Download route as PNG image (Strava sharing)."""
+    cached = route_cache.get(route_id)
+    if cached is None:
+        raise HTTPException(status_code=404, detail="Route verlopen of niet gevonden. Genereer een nieuwe route.")
+
+    png_bytes = image_gen.generate_image(cached["route_data"], cached["wind_data"])
+    dist = cached["route_data"].get("actual_distance_km", "route")
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={"Content-Disposition": f'attachment; filename="rgwnd-{dist}km.png"'},
+    )
+
 
 @app.get("/health")
 def health():
