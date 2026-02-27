@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcairo2-dev pkg-config && \
+    build-essential libcairo2-dev pkg-config && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir -r requirements.txt
 
