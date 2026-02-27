@@ -33,6 +33,8 @@ export interface RouteResponse {
 	message: string;
 	/** True if this is the 2nd free guest route */
 	is_guest_route_2: boolean;
+	/** Unique ID for export endpoints (15 min TTL) */
+	route_id: string | null;
 	debug_data?: any;
 }
 
@@ -154,5 +156,70 @@ export async function fetchAnalytics(
 		throw new Error('Kan analytics niet ophalen.');
 	}
 	return response.json() as Promise<AnalyticsSummary>;
+}
+
+// --- Route exports ---
+
+/**
+ * Download route as GPX file via backend endpoint.
+ */
+export async function downloadGpx(routeId: string, authToken: string | null): Promise<void> {
+	const headers: Record<string, string> = {};
+	if (authToken) {
+		headers['Authorization'] = `Bearer ${authToken}`;
+	}
+
+	const response = await fetch(`${API_URL}/routes/${routeId}/gpx`, { headers });
+
+	if (response.status === 404) {
+		throw new Error('Route verlopen. Genereer een nieuwe route om te downloaden.');
+	}
+	if (!response.ok) {
+		throw new Error('Kan GPX niet downloaden.');
+	}
+
+	const blob = await response.blob();
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = _extractFilename(response, 'rgwnd-route.gpx');
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
+/**
+ * Download route as PNG image via backend endpoint.
+ */
+export async function downloadImage(routeId: string, authToken: string | null): Promise<void> {
+	const headers: Record<string, string> = {};
+	if (authToken) {
+		headers['Authorization'] = `Bearer ${authToken}`;
+	}
+
+	const response = await fetch(`${API_URL}/routes/${routeId}/image`, { headers });
+
+	if (response.status === 404) {
+		throw new Error('Route verlopen. Genereer een nieuwe route om te downloaden.');
+	}
+	if (!response.ok) {
+		throw new Error('Kan afbeelding niet downloaden.');
+	}
+
+	const blob = await response.blob();
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = _extractFilename(response, 'rgwnd-route.png');
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
+function _extractFilename(response: Response, fallback: string): string {
+	const disposition = response.headers.get('Content-Disposition');
+	if (disposition) {
+		const match = disposition.match(/filename="?([^"]+)"?/);
+		if (match) return match[1];
+	}
+	return fallback;
 }
 
