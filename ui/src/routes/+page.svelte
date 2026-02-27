@@ -410,7 +410,7 @@
 
 		// Start marker (emerald)
 		const startIcon = L.divIcon({
-			html: `<div style="background:#10b981;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid rgba(255,255,255,0.3);box-shadow:0 0 12px rgba(16,185,129,0.5);">S</div>`,
+			html: `<div class="flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-white/30 bg-emerald-500 text-[13px] font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]">S</div>`,
 			className: '',
 			iconSize: [30, 30],
 			iconAnchor: [15, 15]
@@ -422,7 +422,7 @@
 		// Junction markers
 		for (const jc of data.junction_coords) {
 			const icon = L.divIcon({
-				html: `<div style="background:rgba(6,182,212,0.9);color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid rgba(255,255,255,0.2);box-shadow:0 0 8px rgba(6,182,212,0.4);">${jc.ref}</div>`,
+				html: `<div class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/20 bg-cyan-500/90 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(6,182,212,0.4)]">${jc.ref}</div>`,
 				className: '',
 				iconSize: [24, 24],
 				iconAnchor: [12, 12]
