@@ -29,7 +29,7 @@ Only update sections that actually changed. Do not rewrite unchanged content.
 
 ## 3. Update memory
 
-Read `~/.claude/projects/-Users-dennisdecoene-Dev-windbased-bikeplanner/memory/MEMORY.md` and update it with any new patterns, architecture changes, or key decisions from this session.
+Read `~/.claude/projects/-Users-dennisdecoene-Dev-rgwnd/memory/MEMORY.md` and update it with any new patterns, architecture changes, or key decisions from this session.
 
 ## 4. Commit and push
 
