@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
@@ -95,6 +95,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["authorization", "content-type"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -332,7 +333,7 @@ async def generate_route(
 @limiter.limit("30/minute")
 async def download_gpx(
     request: Request,
-    route_id: str,
+    route_id: str = Path(..., min_length=32, max_length=32, pattern="^[0-9a-f]{32}$"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(clerk_auth_optional),
 ):
     """Download route as GPX file."""
@@ -353,7 +354,7 @@ async def download_gpx(
 @limiter.limit("10/minute")
 async def download_image(
     request: Request,
-    route_id: str,
+    route_id: str = Path(..., min_length=32, max_length=32, pattern="^[0-9a-f]{32}$"),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(clerk_auth_optional),
 ):
     """Download route as PNG image (Strava sharing)."""

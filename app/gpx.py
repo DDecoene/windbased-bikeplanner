@@ -3,15 +3,7 @@
 from datetime import datetime, timezone
 from xml.sax.saxutils import escape
 
-_CARDINAL_DIRS = [
-    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
-]
-
-
-def _degrees_to_cardinal(deg: float) -> str:
-    ix = round(deg / (360 / len(_CARDINAL_DIRS)))
-    return _CARDINAL_DIRS[ix % len(_CARDINAL_DIRS)]
+from .wind_utils import degrees_to_cardinal
 
 
 def generate_gpx(route_data: dict, wind_data: dict) -> str:
@@ -27,7 +19,7 @@ def generate_gpx(route_data: dict, wind_data: dict) -> str:
     """
     now = datetime.now(timezone.utc).isoformat()
     wind_kmh = f"{wind_data['speed'] * 3.6:.1f}"
-    wind_dir = _degrees_to_cardinal(wind_data["direction"])
+    wind_dir = degrees_to_cardinal(wind_data["direction"])
     wind_label = "Voorspelde wind" if route_data.get("planned_datetime") else "Wind"
 
     planned_note = ""

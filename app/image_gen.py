@@ -6,6 +6,8 @@ import math
 
 import cairo
 
+from .wind_utils import degrees_to_cardinal, wind_arrow_rotation
+
 _W = 1080
 _H = 1080
 _PAD = 52
@@ -14,25 +16,12 @@ _STATS_H = 128
 _MAP_H = 720
 _JUNC_H = 100
 
-_CARDINAL_DIRS = [
-    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
-]
-
-
-def _degrees_to_cardinal(deg: float) -> str:
-    ix = round(deg / (360 / len(_CARDINAL_DIRS)))
-    return _CARDINAL_DIRS[ix % len(_CARDINAL_DIRS)]
-
-
-def _wind_arrow_rotation(direction_deg: float) -> float:
-    return (direction_deg + 180) % 360
-
 
 def _hex_to_rgb(hex_color: str) -> tuple[float, float, float]:
     """Convert hex color like '#06b6d4' to (r, g, b) floats 0-1."""
     h = hex_color.lstrip("#")
-    return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+    r, g, b = (int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+    return (r, g, b)
 
 
 def _set_color(ctx: cairo.Context, hex_color: str, alpha: float = 1.0) -> None:
@@ -113,7 +102,7 @@ def generate_image(route_data: dict, wind_data: dict) -> bytes:
 
     # Wind (right)
     wind_kmh = f"{wind_data['speed'] * 3.6:.1f}"
-    wind_dir = _degrees_to_cardinal(wind_data["direction"])
+    wind_dir = degrees_to_cardinal(wind_data["direction"])
     wind_x = mid_x + _PAD
 
     w_w = _draw_text(ctx, wind_kmh, wind_x, stats_y + 60,
@@ -126,7 +115,7 @@ def generate_image(route_data: dict, wind_data: dict) -> bytes:
                size=12, color="#475569")
 
     # Wind arrow
-    arrow_rot = _wind_arrow_rotation(wind_data["direction"])
+    arrow_rot = wind_arrow_rotation(wind_data["direction"])
     ctx.save()
     ctx.translate(_W - _PAD - 20, stats_y + 64)
     ctx.rotate(arrow_rot * math.pi / 180)

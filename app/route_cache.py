@@ -5,12 +5,16 @@ import uuid
 from typing import Any
 
 _CACHE_TTL = 900  # 15 minutes
+_MAX_ENTRIES = 500
 _cache: dict[str, dict[str, Any]] = {}
 
 
 def store(route_data: dict, wind_data: dict) -> str:
     """Store route data and return a unique route_id."""
     _cleanup()
+    if len(_cache) >= _MAX_ENTRIES:
+        oldest_key = min(_cache, key=lambda k: _cache[k]["expires"])
+        del _cache[oldest_key]
     route_id = uuid.uuid4().hex
     _cache[route_id] = {
         "route_data": route_data,
