@@ -1,0 +1,14 @@
+GitHub Repository Rename — Phase 3 Complete
+
+Repository renamed from:
+  https://github.com/DDecoene/windbased-bikeplanner
+
+To:
+  https://github.com/DDecoene/rgwnd
+
+Local git remote updated to track new URL.
+Old repository URL redirects to new location.
+
+Date: 2026-02-27
+
+This file can be deleted after commit.
