@@ -36,6 +36,28 @@ pnpm lint            # prettier --check
 
 ### No tests exist yet. No Python linter configured.
 
+## Production Deployment
+
+**VPS Information:**
+- **Hetzner CX23** at `46.225.178.121`, Nuremberg
+- **SSH alias:** `rgwnd` (configured in `~/.ssh/config`)
+- **Project path on VPS:** `/opt/rgwnd` (NOT `/root/windbased-bikeplanner`)
+- **Live domain:** https://rgwnd.app
+
+**Deploy from `main` branch:**
+```bash
+# SSH and deploy (from local machine)
+ssh rgwnd 'cd /opt/rgwnd && git pull && docker compose up --build -d --remove-orphans'
+
+# Verify services
+ssh rgwnd 'cd /opt/rgwnd && docker compose ps'
+
+# Check logs (if needed)
+ssh rgwnd 'cd /opt/rgwnd && docker compose logs -f backend'
+```
+
+**IMPORTANT:** The project directory is `/opt/rgwnd`, not `/root/windbased-bikeplanner`. Always use the correct path to avoid "no such file or directory" errors.
+
 ## Development Workflow
 
 **Branching & Merging**
