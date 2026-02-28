@@ -35,7 +35,7 @@ The SSH host alias `rgwnd` must be configured in `~/.ssh/config`. If the connect
 After the build, check that all services are healthy:
 
 ```bash
-ssh rgwnd 'docker compose ps'
+ssh rgwnd 'cd /opt/rgwnd && docker compose ps'
 ```
 
 Report which services are running and flag any that are not in a healthy/running state.
