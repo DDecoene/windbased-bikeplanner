@@ -70,7 +70,7 @@
 				</li>
 				<li class="flex gap-2">
 					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
-					<span>Registreer met een e-mailadres. Het aanmaken van een account is gratis en duurt minder dan een minuut.</span>
+					<span>Kies <span class="text-gray-200">Sign in with Google</span> en volg de aanwijzingen. Je account wordt automatisch aangemaakt.</span>
 				</li>
 				<li class="flex gap-2">
 					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
