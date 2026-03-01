@@ -23,6 +23,14 @@
       "province": "Limburg",
       "strategy": "forecast-teaser",
       "character_count": 147
+    },
+    {
+      "text": "Dinsdag in Hasselt: 17°C, 11 km/u wind, geen regen. Perfect voor je knooppuntenroute. Plan nu op rgwnd.",
+      "date": "2026-03-01T20:23:36.277510",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzkzfhmwx2x",
+      "province": "Limburg",
+      "strategy": "forecast-teaser",
+      "character_count": 103
     }
   ]
 }
