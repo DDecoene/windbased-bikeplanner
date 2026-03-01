@@ -39,6 +39,14 @@
       "province": "Limburg",
       "strategy": "best-day-of-week",
       "character_count": 132
+    },
+    {
+      "text": "In Hasselt waait het vandaag 15 km/u uit het zuiden — perfect voor een knooppuntenroute met rugwind op de terugweg. Laat rgwnd je lus plannen.",
+      "date": "2026-03-01T20:29:33.202146",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzldztv2x2d",
+      "province": "Limburg",
+      "strategy": "wind-reactive",
+      "character_count": 142
     }
   ]
 }
