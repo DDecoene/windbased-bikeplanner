@@ -31,6 +31,14 @@
       "province": "Limburg",
       "strategy": "forecast-teaser",
       "character_count": 103
+    },
+    {
+      "text": "Beste fietsdag deze week in Limburg? Dinsdag. 17°C, 10 km/u wind, droog. Plan je knooppuntenroute op rgwnd — rugwind op de terugweg!",
+      "date": "2026-03-01T20:26:14.494556",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzl64dgpu23",
+      "province": "Limburg",
+      "strategy": "best-day-of-week",
+      "character_count": 132
     }
   ]
 }
