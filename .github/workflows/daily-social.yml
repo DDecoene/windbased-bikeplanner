@@ -45,6 +45,7 @@ jobs:
           cat /tmp/post.txt
 
       - name: Post to Twitter/X
+        continue-on-error: true
         env:
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
@@ -53,12 +54,14 @@ jobs:
         run: python .github/scripts/post_tweet.py /tmp/post.txt
 
       - name: Post to Bluesky
+        continue-on-error: true
         env:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
         run: python .github/scripts/post_bluesky.py /tmp/post.txt
 
       - name: Post to Facebook
+        continue-on-error: true
         env:
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
