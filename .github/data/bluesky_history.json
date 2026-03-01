@@ -7,6 +7,14 @@
       "province": "Limburg",
       "strategy": "best-day-of-week",
       "character_count": 96
+    },
+    {
+      "text": "Beste fietsdag deze week in Hasselt? Dinsdag: 17°C, 10.8 km/u wind, 0% regen. Plan je route nu op rgwnd.",
+      "date": "2026-03-01T20:06:57.356099",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzk3mti4d2j",
+      "province": "Limburg",
+      "strategy": "best-day-of-week",
+      "character_count": 104
     }
   ]
 }
