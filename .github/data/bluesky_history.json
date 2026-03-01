@@ -55,6 +55,14 @@
       "province": "Limburg",
       "strategy": "best-day-of-week",
       "character_count": 113
+    },
+    {
+      "text": "Dinsdag in Limburg wordt perfect voor fietsen: 17°C, 10,8 km/u wind uit het zuiden en droog. Plan je lus op rgwnd en geniet er voluit van.",
+      "date": "2026-03-01T20:37:50.514003",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzlsu5d5g2o",
+      "province": "Limburg",
+      "strategy": "forecast-teaser",
+      "character_count": 138
     }
   ]
 }

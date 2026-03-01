@@ -1,3 +1,12 @@
 {
-  "posts": []
+  "posts": [
+    {
+      "text": "Dinsdag in Limburg wordt perfect voor fietsen: 17°C, 10,8 km/u wind uit het zuiden en droog. Plan je lus op rgwnd en geniet er voluit van.",
+      "date": "2026-03-01T20:37:58.961126",
+      "platform_id": "1043626745493105_122102876727277542",
+      "province": "Limburg",
+      "strategy": "forecast-teaser",
+      "character_count": 138
+    }
+  ]
 }
