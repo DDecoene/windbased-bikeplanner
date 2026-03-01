@@ -69,8 +69,13 @@ def main():
 
     print("Posting to Facebook...")
     req = urllib.request.Request(url, data=data, method="POST")
-    with urllib.request.urlopen(req) as resp:
-        result = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        print(f"Facebook API error {e.code}: {error_body}")
+        raise
 
     post_id = result["id"]
     print(f"Posted! Post ID: {post_id}")
