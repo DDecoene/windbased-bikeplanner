@@ -15,6 +15,14 @@
       "province": "Limburg",
       "strategy": "best-day-of-week",
       "character_count": 104
+    },
+    {
+      "text": "Dinsdag in Limburg: 17°C, 10 km/u wind, geen regen. Dat wordt dé fietsdag! Plan je knooppuntenroute op rgwnd en geniet van perfecte omstandigheden.",
+      "date": "2026-03-01T20:22:11.196944",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzkwucpia2m",
+      "province": "Limburg",
+      "strategy": "forecast-teaser",
+      "character_count": 147
     }
   ]
 }
