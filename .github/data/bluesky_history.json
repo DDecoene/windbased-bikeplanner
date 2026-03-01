@@ -1,3 +1,12 @@
 {
-  "posts": []
+  "posts": [
+    {
+      "text": "Beste fietsdag deze week in Hasselt? Dinsdag. 17°C, 10,8 km/u wind, droog. Plan je lus op rgwnd.",
+      "date": "2026-03-01T20:04:54.376591",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mfzjxxjirs2m",
+      "province": "Limburg",
+      "strategy": "best-day-of-week",
+      "character_count": 96
+    }
+  ]
 }
