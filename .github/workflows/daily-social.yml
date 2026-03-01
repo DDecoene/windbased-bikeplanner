@@ -1,0 +1,73 @@
+name: Daily Social Media Post
+
+on:
+  schedule:
+    # Daily at 9:00 AM UTC (10 AM Belgian winter, 11 AM Belgian summer)
+    - cron: '0 9 * * *'
+
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  post-social:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install tweepy atproto
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Fetch weather data
+        run: python .github/scripts/fetch_weather.py
+
+      - name: Generate post with Claude
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          python .github/scripts/generate_prompt.py > /tmp/prompt.txt
+          claude -p --model claude-haiku-4-5 < /tmp/prompt.txt > /tmp/post.txt
+          echo "Generated post:"
+          cat /tmp/post.txt
+
+      - name: Post to Twitter/X
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+        run: python .github/scripts/post_tweet.py /tmp/post.txt
+
+      - name: Post to Bluesky
+        env:
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+        run: python .github/scripts/post_bluesky.py /tmp/post.txt
+
+      - name: Post to Facebook
+        env:
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+        run: python .github/scripts/post_facebook.py /tmp/post.txt
+
+      - name: Commit updated history
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .github/data/post_history.json .github/data/bluesky_history.json .github/data/facebook_history.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update social media post history [skip ci]"
+          git push
