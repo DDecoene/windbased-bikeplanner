@@ -8,3 +8,4 @@ fastapi-clerk-auth
 clerk-backend-api
 stripe>=8.0
 pycairo
+httpx>=0.27
