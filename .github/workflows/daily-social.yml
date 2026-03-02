@@ -3,7 +3,7 @@ name: Daily Social Media Post
 on:
   schedule:
     # Daily at 9:00 AM UTC (10 AM Belgian winter, 11 AM Belgian summer)
-    - cron: '0 9 * * *'
+    - cron: '0 8 * * *'
 
   # Allow manual trigger for testing
   workflow_dispatch:
