@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **"Mijn locatie" Geolocation** — Use your current location as starting point
+  - Crosshair icon inside the address input (right-aligned)
+  - Browser Geolocation API with 10s timeout and high accuracy
+  - Shows "Mijn locatie" in input field on success
+  - Dutch error messages for permission denied, timeout, and unavailable
+  - Auto-hide error after 5 seconds
+  - Feature detection: icon hidden if browser doesn't support geolocation
+  - Backend accepts optional `start_coords` field, skips Nominatim geocoding
+  - Belgium bounding box validation on coordinates
+  - Works on both mobile and desktop (HTTPS required, provided by Caddy)
+
 ## [1.0.0] - 2026-02-25
 
 ### Added
