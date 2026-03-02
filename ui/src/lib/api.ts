@@ -45,12 +45,18 @@ export async function generateRoute(
 	start_address: string,
 	distance_km: number,
 	planned_datetime?: string | null,
-	authToken?: string | null
+	authToken?: string | null,
+	start_coords?: [number, number] | null
 ): Promise<RouteResponse> {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), 120_000);
 
-	const body: Record<string, unknown> = { start_address, distance_km };
+	const body: Record<string, unknown> = { distance_km };
+	if (start_coords) {
+		body.start_coords = start_coords;
+	} else {
+		body.start_address = start_address;
+	}
 	if (planned_datetime) {
 		body.planned_datetime = planned_datetime;
 	}
