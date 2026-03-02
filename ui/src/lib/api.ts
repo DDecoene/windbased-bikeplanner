@@ -229,3 +229,43 @@ function _extractFilename(response: Response, fallback: string): string {
 	return fallback;
 }
 
+// --- Garmin ---
+
+export async function checkGarminLinked(authToken: string): Promise<boolean> {
+	const response = await fetch(`${API_URL}/garmin/status`, {
+		headers: { Authorization: `Bearer ${authToken}` }
+	});
+	if (response.status === 503) return false;
+	if (!response.ok) return false;
+	const data = (await response.json()) as { linked: boolean };
+	return data.linked;
+}
+
+export async function sendToGarmin(
+	routeId: string,
+	authToken: string
+): Promise<{ status: string; course_name: string }> {
+	const response = await fetch(`${API_URL}/garmin/upload/${routeId}`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${authToken}` }
+	});
+	if (response.status === 404) {
+		throw new Error('Route verlopen. Genereer een nieuwe route.');
+	}
+	if (response.status === 401) {
+		const relink = response.headers.get('X-Garmin-Relink');
+		if (relink) {
+			throw new Error('GARMIN_RELINK');
+		}
+		throw new Error('Garmin account niet gekoppeld.');
+	}
+	if (!response.ok) {
+		throw new Error('Garmin is niet bereikbaar. Probeer het later opnieuw.');
+	}
+	return (await response.json()) as { status: string; course_name: string };
+}
+
+export function getGarminAuthUrl(): string {
+	return `${API_URL}/garmin/auth`;
+}
+
