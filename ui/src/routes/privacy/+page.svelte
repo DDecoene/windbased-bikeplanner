@@ -72,6 +72,18 @@
 		</section>
 
 		<section>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Locatiegegevens</h2>
+			<p>
+				Je kunt optioneel je huidige locatie delen via de knop "Mijn locatie" in het adresveld.
+				Dit gebruikt de locatiefunctie van je browser (Geolocation API). Je locatie wordt
+				<strong class="text-gray-300">niet opgeslagen</strong> — de coördinaten worden enkel
+				eenmalig gebruikt om je route te berekenen en daarna verwijderd. RGWND vraagt je
+				locatie nooit automatisch op; dit gebeurt uitsluitend wanneer je zelf op het
+				vizier-icoon klikt.
+			</p>
+		</section>
+
+		<section>
 			<h2 class="mb-1 text-base font-semibold text-gray-200">Snelheidsbeperking</h2>
 			<p>
 				Je IP-adres wordt uitsluitend gebruikt voor snelheidsbeperking (max. 10 verzoeken per

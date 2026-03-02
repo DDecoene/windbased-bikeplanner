@@ -102,6 +102,7 @@
 						<li class="list-disc text-gray-500"><span class="text-gray-400">Leuven</span></li>
 						<li class="list-disc text-gray-500"><span class="text-gray-400">Kardinaal Mercierplein, Gent</span></li>
 					</ul>
+					<p class="mt-2">Of gebruik je huidige locatie: tik op het <span class="text-gray-200">vizier-icoon</span> rechts in het adresveld. Je browser vraagt toestemming om je locatie te delen — na goedkeuring verschijnt <span class="text-cyan-400">Mijn locatie</span> in het veld en worden je coördinaten rechtstreeks gebruikt.</p>
 					<p class="mt-1 text-xs text-gray-500">De app zoekt enkel in België. De startplaats hoeft niet exact op een knooppunt te liggen — RGWND zoekt zelf het dichtstbijzijnde knooppunt.</p>
 				</div>
 
