@@ -97,7 +97,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["authorization", "content-type"],
-    expose_headers=["Content-Disposition"],
+    expose_headers=["Content-Disposition", "X-Garmin-Relink"],
 )
 
 

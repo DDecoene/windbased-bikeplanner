@@ -94,6 +94,9 @@ When adding or changing any user-facing feature, these pages MUST be updated as 
 - `gpx.py` — GPX XML generation from route data. Used by `GET /routes/{route_id}/gpx`. Cardinal direction conversion, XML escaping via stdlib.
 - `image_gen.py` — Cairo-based 1080x1080 PNG image generation (Strava sharing style). Used by `GET /routes/{route_id}/image`. Requires pycairo + system libcairo2-dev.
 - `notify.py` — Telegram alerting (Bot API). Silent no-op if `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` env vars not set. 5-minute deduplication.
+- `garmin.py` — Garmin Connect OAuth 2.0 PKCE + Course upload. Token storage/refresh via Clerk privateMetadata. Feature-flagged via `GARMIN_CLIENT_ID` env var.
+- `garmin_cache.py` — In-memory TTL cache (5 min) for OAuth PKCE state parameters.
+- `garmin_routes.py` — Garmin APIRouter: `/garmin/status` (link check), `/garmin/auth` (OAuth URL), `/garmin/callback` (OAuth callback), `/garmin/upload/{route_id}` (Course upload). All auth-gated except callback.
 
 **Frontend (`ui/`)**
 - SvelteKit app (Svelte 5, Tailwind CSS v4, pnpm, adapter-node).
@@ -120,7 +123,7 @@ When adding or changing any user-facing feature, these pages MUST be updated as 
 - `docker-compose.yml` — caddy:443 (128MB/0.25CPU), backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volumes for overpass_cache and analytics_data. Backend/frontend ports not exposed directly (Caddy proxies).
 - `certs/` — mkcert-generated localhost TLS certificates (gitignored). Generate with `mkcert -install && mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1`.
 - `watchdog.sh` — Infrastructure health monitor (checks backend `/health` + frontend every 60s, alerts on status change).
-- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `ANALYTICS_ADMIN_IDS` (comma-separated Clerk user IDs), optionally `CORS_ORIGINS`, `OVERPASS_URL`.
+- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `ANALYTICS_ADMIN_IDS` (comma-separated Clerk user IDs), optionally `CORS_ORIGINS`, `OVERPASS_URL`. Garmin: `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_REDIRECT_URI` (all optional — feature hidden when absent).
 
 ## Key Details
 
