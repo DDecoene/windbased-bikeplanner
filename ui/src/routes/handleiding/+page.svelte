@@ -177,10 +177,40 @@
 		</div>
 	</section>
 
-	<!-- Stap 6: Geplande rit -->
+	<!-- Stap 6: Stuur naar Garmin -->
 	<section class="flex flex-col gap-4">
 		<div class="flex items-center gap-3">
 			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">6</span>
+			<h2 class="text-lg font-semibold text-gray-200">Stuur naar Garmin</h2>
+		</div>
+		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">
+			<p>Heb je een Garmin toestel? Je kunt de route rechtstreeks naar Garmin Connect sturen zonder een GPX-bestand te hoeven downloaden.</p>
+			<ol class="mt-3 flex flex-col gap-2">
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>Koppel je Garmin account <span class="text-gray-200">eenmalig</span> via de <span class="text-gray-200">"Koppel Garmin"</span> knop na het genereren van een route.</span>
+				</li>
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>Je wordt doorgestuurd naar <span class="text-gray-200">Garmin Connect</span> om toestemming te geven. Na goedkeuring keer je automatisch terug.</span>
+				</li>
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>Daarna verschijnt de <span class="text-gray-200">"Stuur naar Garmin"</span> knop bij elke route die je genereert.</span>
+				</li>
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>De route wordt als <span class="text-gray-200">Course</span> naar Garmin Connect gestuurd en automatisch gesynchroniseerd met je toestel.</span>
+				</li>
+			</ol>
+			<p class="mt-3 text-xs text-gray-500">Compatibel met alle Garmin toestellen die synchroniseren met Garmin Connect, waaronder Edge fietscomputers, Forerunner en Fenix horloges.</p>
+		</div>
+	</section>
+
+	<!-- Stap 7: Geplande rit -->
+	<section class="flex flex-col gap-4">
+		<div class="flex items-center gap-3">
+			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">7</span>
 			<h2 class="text-lg font-semibold text-gray-200">Geplande rit (toekomstige wind)</h2>
 		</div>
 		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">
