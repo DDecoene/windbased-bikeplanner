@@ -63,6 +63,14 @@
       "province": "Limburg",
       "strategy": "forecast-teaser",
       "character_count": 138
+    },
+    {
+      "text": "In Brugge waait het vandaag 17 km/u uit het zuiden. Plan op rgwnd een lus naar het noorden — terug krijg je de wind mee!",
+      "date": "2026-03-02T08:18:19.862063",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mg2sxgg6nx2z",
+      "province": "West-Vlaanderen",
+      "strategy": "wind-reactive",
+      "character_count": 120
     }
   ]
 }
