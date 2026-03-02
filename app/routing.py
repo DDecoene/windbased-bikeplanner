@@ -269,19 +269,24 @@ def _score_loop(kp_loop: List[int], K: nx.Graph, target_m: float) -> float:
 
 # --- Hoofdfunctie ---
 
-def find_wind_optimized_loop(start_address: str, distance_km: float,
+def find_wind_optimized_loop(start_address: Optional[str] = None,
+                             start_coords: Optional[tuple] = None,
+                             distance_km: float = 30.0,
                              planned_datetime: Optional[datetime] = None,
                              tolerance: float = 0.2, debug: bool = False) -> dict:
     t_start = time.perf_counter()
     timings = {}
     stats = {}
 
-    logger.info("Route aanvraag: '%s', %.1f km, planned=%s", start_address, distance_km, planned_datetime)
+    logger.info("Route aanvraag: address='%s', coords=%s, %.1f km, planned=%s", start_address, start_coords, distance_km, planned_datetime)
 
     # --- Stap 1: Geocoding & Weather (cached) ---
-    coords = weather.get_coords_from_address(start_address)
-    if not coords:
-        raise ValueError(f"Could not geocode address: {start_address}")
+    if start_coords:
+        coords = start_coords
+    else:
+        coords = weather.get_coords_from_address(start_address)
+        if not coords:
+            raise ValueError(f"Could not geocode address: {start_address}")
     if planned_datetime:
         wind_data = weather.get_forecast_wind_data(coords[0], coords[1], planned_datetime)
     else:
@@ -451,7 +456,7 @@ def find_wind_optimized_loop(start_address: str, distance_km: float,
         message = f"SUCCESS: Route geoptimaliseerd voor voorspelde wind op {planned_datetime.strftime('%d/%m/%Y %H:%M')}."
 
     response = {
-        "start_address": start_address,
+        "start_address": start_address or "Mijn locatie",
         "target_distance_km": distance_km,
         "actual_distance_km": round(actual_distance_m / 1000, 2),
         "junctions": junctions or ["Geen knooppunten op deze route"],

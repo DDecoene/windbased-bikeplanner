@@ -226,10 +226,12 @@ async def generate_route(
         user_id = f"guest:{ip}"
         usage = None
         premium = False
-        logger.info("Gast route: %s, %s km (IP: %s)", route_request.start_address, route_request.distance_km, ip)
+        start_label = route_request.start_address or f"coords:{route_request.start_coords}"
+        logger.info("Gast route: %s, %s km (IP: %s)", start_label, route_request.distance_km, ip)
     else:
         user_id = credentials.decoded.get("sub")
-        logger.info("Route request from user %s: %s, %s km", user_id, route_request.start_address, route_request.distance_km)
+        start_label = route_request.start_address or f"coords:{route_request.start_coords}"
+        logger.info("Route request from user %s: %s, %s km", user_id, start_label, route_request.distance_km)
         premium = _is_premium(credentials)
         usage = None
         if not premium:
@@ -260,6 +262,7 @@ async def generate_route(
     try:
         route_data = routing.find_wind_optimized_loop(
             start_address=route_request.start_address,
+            start_coords=route_request.start_coords,
             distance_km=route_request.distance_km,
             planned_datetime=planned_dt,
             debug=debug
