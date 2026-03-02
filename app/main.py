@@ -24,6 +24,7 @@ from . import gpx as gpx_module
 from . import image_gen
 from .graph_manager import GraphManager
 from .notify import send_alert
+from .garmin_routes import router as garmin_router
 # Stripe uitgeschakeld tot premium live gaat
 # from .stripe_routes import router as stripe_router
 
@@ -68,6 +69,7 @@ else:
     logger.info("Geen pre-built graph — Overpass fallback actief")
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+app.include_router(garmin_router)
 # app.include_router(stripe_router)  # Stripe uitgeschakeld
 
 @app.exception_handler(RateLimitExceeded)
