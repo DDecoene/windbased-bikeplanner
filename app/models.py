@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Tuple, Optional, Dict
 
 class UsageResponse(BaseModel):
@@ -9,13 +9,27 @@ class UsageResponse(BaseModel):
 
 
 class RouteRequest(BaseModel):
-    start_address: str = Field(..., max_length=200, example="Grote Markt, Bruges, Belgium")
+    start_address: Optional[str] = Field(None, max_length=200, example="Grote Markt, Bruges, Belgium")
+    start_coords: Optional[Tuple[float, float]] = Field(
+        None,
+        description="Direct coordinates (lat, lon) — skips geocoding. Used for browser geolocation."
+    )
     distance_km: float = Field(..., gt=5, le=200, example=45.5)
     planned_datetime: Optional[datetime] = Field(
         None,
         description="Plan a ride for a future date/time (up to 16 days ahead). Premium feature.",
         example="2026-02-20T14:00:00"
     )
+
+    @model_validator(mode='after')
+    def validate_start(self):
+        if not self.start_address and not self.start_coords:
+            raise ValueError("Geef een startadres of gebruik je locatie.")
+        if self.start_coords:
+            lat, lon = self.start_coords
+            if not (49.4 <= lat <= 51.6 and 2.5 <= lon <= 6.5):
+                raise ValueError("Locatie valt buiten België.")
+        return self
 
 class WindData(BaseModel):
     speed: float = Field(..., description="Wind speed in m/s")

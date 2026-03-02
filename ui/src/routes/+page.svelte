@@ -42,6 +42,13 @@
 	let suggestAbortController: AbortController | null = null;
 	let addressInputElement: HTMLInputElement | null = null;
 
+	// Geolocation state
+	let locationCoords: [number, number] | null = null;
+	let geoLoading: boolean = false;
+	let geoError: string | null = null;
+	let geoErrorTimer: ReturnType<typeof setTimeout> | null = null;
+	let hasGeolocation: boolean = false;
+
 	// Reset UI bij uitloggen
 	$: if (!ctx.auth.userId) {
 		routeData = null;
@@ -50,6 +57,8 @@
 		usageLimitReached = false;
 		showGuestLimitCta = false;  // Add this line
 		isGuestRoute = false;        // Add this line
+		locationCoords = null;
+		geoError = null;
 		usePlannedRide = false;
 		plannedDatetime = '';
 		showSuggestions = false;
@@ -178,6 +187,8 @@
 	// --- Address Autocomplete ---
 
 	async function handleAddressInput(e: Event) {
+		locationCoords = null;
+		geoError = null;
 		const val = (e.target as HTMLInputElement).value;
 		startAddress = val;
 		highlightedIndex = -1;
@@ -273,6 +284,39 @@
 		}
 	}
 
+	// --- Geolocation ---
+
+	function requestGeolocation() {
+		if (geoLoading || !hasGeolocation) return;
+
+		geoLoading = true;
+		geoError = null;
+		if (geoErrorTimer) clearTimeout(geoErrorTimer);
+
+		navigator.geolocation.getCurrentPosition(
+			(position) => {
+				locationCoords = [position.coords.latitude, position.coords.longitude];
+				startAddress = 'Mijn locatie';
+				showSuggestions = false;
+				suggestions = [];
+				geoLoading = false;
+			},
+			(error) => {
+				geoLoading = false;
+				locationCoords = null;
+				if (error.code === error.PERMISSION_DENIED) {
+					geoError = 'Locatietoegang geweigerd. Typ een adres.';
+				} else if (error.code === error.TIMEOUT) {
+					geoError = 'Locatie niet gevonden. Typ een adres.';
+				} else {
+					geoError = 'Locatie niet beschikbaar. Typ een adres.';
+				}
+				geoErrorTimer = setTimeout(() => { geoError = null; }, 5000);
+			},
+			{ enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+		);
+	}
+
 	// --- Map ---
 
 	async function loadUsage(): Promise<void> {
@@ -292,6 +336,7 @@
 		if (typeof window !== 'undefined') {
 			L = await import('leaflet');
 			initializeMap();
+			hasGeolocation = 'geolocation' in navigator;
 
 			// Laad usage info als ingelogd
 			setTimeout(() => loadUsage(), 500);
@@ -356,7 +401,7 @@
 		try {
 			const dt = usePlannedRide && plannedDatetime ? plannedDatetime : null;
 			const token = (await ctx.session?.getToken()) ?? null;
-			const data = await generateRoute(startAddress, distanceKm, dt, token);
+			const data = await generateRoute(startAddress, distanceKm, dt, token, locationCoords);
 
 			// Track if this is a guest route
 			isGuestRoute = !token;
@@ -526,16 +571,35 @@
 					on:input={handleAddressInput}
 					on:keydown={handleAddressKeydown}
 					disabled={isLoading}
-					class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					class="w-full rounded-lg border border-gray-700 bg-gray-800 p-2.5 pr-10 text-gray-100 placeholder-gray-500 transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 					placeholder="bv. Grote Markt, Brugge"
-					required
+					required={!locationCoords}
 				/>
-				{#if suggestionLoading}
-					<div class="absolute right-2.5 top-1/2 -translate-y-1/2">
+				<div class="absolute right-2.5 top-1/2 -translate-y-1/2">
+					{#if suggestionLoading || geoLoading}
 						<div class="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-cyan-500"></div>
-					</div>
-				{/if}
+					{:else if hasGeolocation}
+						<button
+							type="button"
+							on:click={requestGeolocation}
+							disabled={isLoading}
+							class="text-gray-500 transition hover:text-cyan-400 disabled:opacity-50"
+							title="Gebruik mijn locatie"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="12" r="3" />
+								<line x1="12" y1="2" x2="12" y2="6" />
+								<line x1="12" y1="18" x2="12" y2="22" />
+								<line x1="2" y1="12" x2="6" y2="12" />
+								<line x1="18" y1="12" x2="22" y2="12" />
+							</svg>
+						</button>
+					{/if}
+				</div>
 			</div>
+			{#if geoError}
+				<p class="mt-1 text-xs text-amber-400">{geoError}</p>
+			{/if}
 		</div>
 		<div class="mb-5">
 			<label for="distance" class="mb-1.5 block text-sm font-medium text-gray-400">
