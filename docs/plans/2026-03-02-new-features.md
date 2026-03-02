@@ -6,10 +6,6 @@ Deelbare Route Links (Social Virality)
 The Problem: Currently, routes are cached for 15 minutes (route_cache.py). If I want to share a cool route with my cycling group's WhatsApp, I have to send an image or a GPX.
 The Fix: Store generated routes permanently (or for 30 days) in SQLite alongside your analytics. Create a public route page (/route/[uuid]). If a user opens it, they see the route, the map, and a CTA: "Deze route werd berekend voor rugwind. Maak je eigen RGWND route." This is the #1 way routing apps grow organically.
 
-Route Bibliotheek (Mijn Routes)
-The Problem: Currently, if I plan a great route for next Saturday, I have to download the GPX immediately before the 15-minute cache expires.
-The Fix: Add a "Sla route op" button for authenticated users. Create a /mijn-routes page where they can see their planned and past routes. You already have the Clerk ID; just link it to a new saved_routes SQLite table.
-
 "Flandrien Modus" or "Beuk-Modus"
 You can frame this as a difficulty selector.
 allowing the user to introduce a difficulty. maybe he wants to go against the wind to make his training as hard as possible
@@ -17,6 +13,11 @@ Modus 1: Rugwind (Default) - "Lekker cruisen met de wind in de rug."
 Modus 2: Negeer wind - "Geef me gewoon de kortste lus."
 Modus 3: Flandrien / Training - "Maximale tegenwind. Maak me kapot."
 Imagine the shareable Strava PNG export for this: a dark red UI instead of your normal cyan, with a stamp saying "Flandrien Modus Voltooid". Competitive cyclists will share this specifically to show off how tough their training was.
+
+Route Bibliotheek (Mijn Routes)
+The Problem: Currently, if I plan a great route for next Saturday, I have to download the GPX immediately before the 15-minute cache expires.
+The Fix: Add a "Sla route op" button for authenticated users. Create a /mijn-routes page where they can see their planned and past routes. You already have the Clerk ID; just link it to a new saved_routes SQLite table.
+
 
 Usability Enhancements
 Tap-to-Start op de kaart: Let users click/long-press anywhere on the Leaflet map to drop a start pin, updating start_coords instantly without typing an address.
