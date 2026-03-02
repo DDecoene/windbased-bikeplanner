@@ -72,6 +72,13 @@ ssh rgwnd 'cd /opt/rgwnd && docker compose logs -f backend'
 - No `Co-Authored-By` trailer — commit as yourself
 - Write clear, descriptive commit messages (imperative mood: "add", "fix", "improve")
 
+**Documentation — update with every user-facing change**
+When adding or changing any user-facing feature, these pages MUST be updated as part of the implementation (not as an afterthought):
+- `/handleiding` (`ui/src/routes/handleiding/+page.svelte`) — Dutch user manual: add/update relevant step or tip
+- `/privacy` (`ui/src/routes/privacy/+page.svelte`) — privacy policy: update if new data is collected/used (location, cookies, etc.)
+- `/contact` (`ui/src/routes/contact/+page.svelte`) — FAQ: add entry if the feature raises common questions
+- `CLAUDE.md` — update architecture descriptions to reflect the change
+
 ## Architecture
 
 **Backend (`app/`)**
