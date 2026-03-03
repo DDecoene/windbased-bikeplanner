@@ -22,6 +22,7 @@
 
 	let L: typeof import('leaflet') | undefined;
 	const ctx = useClerkContext();
+	let { data } = $props();
 
 	// Form state
 	let startAddress: string = '';
@@ -667,11 +668,20 @@
 	}
 </script>
 
-<Meta
-	title="RGWND | Windgeoptimaliseerde fietslussen in België"
-	description="Ben je ook wind op kop beu? Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
-	path="/"
-/>
+{#if data?.sharedRoute}
+	<Meta
+		title="Rugwind route — {data.sharedRoute.distance}km{data.sharedRoute.address ? ` vanuit ${data.sharedRoute.address}` : ''}"
+		description="Route met {data.sharedRoute.junctionCount} knooppunten, berekend voor rugwind op het Belgische fietsknooppuntennetwerk."
+		path="/?r={data.sharedRoute.hash}"
+		image="/api/routes/preview-image?r={data.sharedRoute.hash}"
+	/>
+{:else}
+	<Meta
+		title="RGWND | Windgeoptimaliseerde fietslussen in België"
+		description="Ben je ook wind op kop beu? Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
+		path="/"
+	/>
+{/if}
 
 <main class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
 	<!-- Header -->
