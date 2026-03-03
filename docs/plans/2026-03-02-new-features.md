@@ -1,6 +1,9 @@
-Direct Device Sync (Garmin / Wahoo / Komoot API)
+Direct Device Sync (Garmin / Wahoo / Komoot API) — ⏳ WIP
+Status: Code complete on feat/garmin-sync (PR #7). Awaiting Garmin Developer Program approval (~2 business days). Feature-flagged via GARMIN_CLIENT_ID env var — merged to main but hidden until credentials configured.
+Design doc: docs/plans/2026-03-02-garmin-sync-design.md
+Remaining: Garmin approval → add env vars → verify OAuth endpoint URLs → test full flow → activate.
 The Problem: Downloading a GPX on a smartphone, finding the file in the OS, and opening it in the Garmin Connect app is a clunky, high-friction process.
-The Fix: Implement OAuth for Garmin Connect or Wahoo. Add a button: "Stuur naar mijn Garmin". This pushes the route directly to their bike computer over WiFi/Bluetooth. Note: Garmin's API requires an application process, but it's the biggest quality-of-life upgrade a cycling app can have.
+The Fix: Implemented OAuth 2.0 PKCE for Garmin Connect. "Stuur naar Garmin" button pushes route as a Course to Garmin Connect, which auto-syncs to the user's device. Wahoo/Komoot deferred to later phase.
 
 Deelbare Route Links (Social Virality)
 The Problem: Currently, routes are cached for 15 minutes (route_cache.py). If I want to share a cool route with my cycling group's WhatsApp, I have to send an image or a GPX.
