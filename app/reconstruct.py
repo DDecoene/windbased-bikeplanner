@@ -70,8 +70,20 @@ def reconstruct_route(
         len(junctions), distance_km, radius_m,
     )
 
-    overpass_data = overpass.fetch_rcn_network(lat, lon, radius_m)
-    G = overpass.build_graph(overpass_data)
+    try:
+        overpass_data = overpass.fetch_rcn_network(lat, lon, radius_m)
+        G = overpass.build_graph(overpass_data)
+    except Exception as e:
+        logger.error("Graph ophalen mislukt bij reconstructie: %s", e)
+        raise ReconstructionError(
+            "Kon het knooppuntennetwerk niet ophalen. Probeer het later opnieuw."
+        )
+
+    if G.number_of_nodes() == 0:
+        raise ReconstructionError(
+            "Geen knooppuntennetwerk gevonden in de buurt van deze route."
+        )
+
     K = overpass.build_knooppunt_graph(G)
 
     # --- ref_to_node mapping ---
