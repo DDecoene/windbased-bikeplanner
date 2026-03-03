@@ -63,20 +63,22 @@
 	let hasGeolocation: boolean = false;
 
 	// Reset UI bij uitloggen
-	$: if (!ctx.auth.userId) {
-		routeData = null;
-		errorMessage = null;
-		usageInfo = null;
-		usageLimitReached = false;
-		showGuestLimitCta = false;  // Add this line
-		isGuestRoute = false;        // Add this line
-		locationCoords = null;
-		geoError = null;
-		usePlannedRide = false;
-		plannedDatetime = '';
-		showSuggestions = false;
-		clearMapLayers();
-	}
+	$effect(() => {
+		if (!ctx.auth.userId) {
+			routeData = null;
+			errorMessage = null;
+			usageInfo = null;
+			usageLimitReached = false;
+			showGuestLimitCta = false;
+			isGuestRoute = false;
+			locationCoords = null;
+			geoError = null;
+			usePlannedRide = false;
+			plannedDatetime = '';
+			showSuggestions = false;
+			clearMapLayers();
+		}
+	});
 
 	// Map layers
 	let mapContainer: HTMLDivElement;
