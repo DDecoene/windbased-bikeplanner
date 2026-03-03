@@ -71,6 +71,14 @@
       "province": "West-Vlaanderen",
       "strategy": "wind-reactive",
       "character_count": 120
+    },
+    {
+      "text": "Beste fietsdag deze week in Gent? Donderdag: 18°C, 10 km/u wind, droog weer. Plan je lus op rgwnd en geniet van rugwind.",
+      "date": "2026-03-03T08:43:53.374920",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mg5eu2ehhp2q",
+      "province": "Oost-Vlaanderen",
+      "strategy": "best-day-of-week",
+      "character_count": 120
     }
   ]
 }
