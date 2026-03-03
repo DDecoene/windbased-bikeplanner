@@ -8,7 +8,10 @@
 		downloadImage,
 		checkGarminLinked,
 		sendToGarmin,
-		getGarminAuthUrl
+		getGarminAuthUrl,
+		encodeRoute,
+		decodeRoute,
+		reconstructRoute
 	} from '$lib/api';
 	import 'leaflet/dist/leaflet.css';
 	import { useClerkContext } from 'svelte-clerk';
@@ -32,6 +35,7 @@
 	let routeData: RouteResponse | null = null;
 	let loadingMessage: string = '';
 	let loadingInterval: ReturnType<typeof setInterval> | null = null;
+	let shareToastVisible: boolean = false;
 
 	// Usage tracking
 	let usageInfo: UsageInfo | null = null;
@@ -143,6 +147,30 @@
 			await downloadImage(routeData.route_id, token);
 		} catch (e: any) {
 			exportError = e.message;
+		}
+	}
+
+	async function handleShareRoute(): Promise<void> {
+		if (!routeData) return;
+		try {
+			const hash = await encodeRoute(routeData);
+			const shareUrl = `${window.location.origin}/?r=${hash}`;
+
+			if (navigator.share) {
+				await navigator.share({
+					title: `Rugwind route — ${routeData.actual_distance_km}km`,
+					text: `Bekijk mijn RGWND route: ${routeData.actual_distance_km}km met ${routeData.junctions.length - 1} knooppunten`,
+					url: shareUrl
+				});
+			} else {
+				await navigator.clipboard.writeText(shareUrl);
+				shareToastVisible = true;
+				setTimeout(() => (shareToastVisible = false), 3000);
+			}
+		} catch (e: any) {
+			if (e.name !== 'AbortError') {
+				errorMessage = 'Kon de deellink niet aanmaken.';
+			}
 		}
 	}
 
@@ -419,6 +447,34 @@
 				const url = new URL(window.location.href);
 				url.searchParams.delete('garmin');
 				window.history.replaceState({}, '', url.toString());
+			}
+
+			// Handle ?r= shared route link
+			const routeParam = new URLSearchParams(window.location.search).get('r');
+			if (routeParam) {
+				// Clean the URL
+				const url = new URL(window.location.href);
+				url.searchParams.delete('r');
+				window.history.replaceState({}, '', url.toString());
+
+				// Reconstruct the shared route
+				isLoading = true;
+				startLoadingMessages();
+				try {
+					const payload = await decodeRoute(routeParam);
+					// Pre-fill form
+					startAddress = payload.a || '';
+					distanceKm = payload.d;
+
+					const data = await reconstructRoute(payload);
+					routeData = data;
+					drawRoute(data);
+				} catch (e: any) {
+					errorMessage = e.message || 'Kon de gedeelde route niet laden.';
+				} finally {
+					isLoading = false;
+					stopLoadingMessages();
+				}
 			}
 
 			// Check for pending route after sign-in redirect
@@ -1031,6 +1087,27 @@
 					</svg>
 					Deel afbeelding
 				</button>
+				<button
+					type="button"
+					on:click={handleShareRoute}
+					class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+						/>
+					</svg>
+					Deel route
+				</button>
 				{#if garminAvailable && ctx.auth?.userId}
 					<button
 						type="button"
@@ -1174,6 +1251,14 @@
 			class="aspect-square w-full overflow-hidden rounded-lg ring-1 ring-gray-800"
 		></div>
 	</div>
+
+	{#if shareToastVisible}
+		<div
+			class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white shadow-lg"
+		>
+			Link gekopieerd!
+		</div>
+	{/if}
 </main>
 
 <footer class="mx-auto w-full max-w-5xl px-4 pt-2 pb-6 text-center text-xs text-gray-600">
