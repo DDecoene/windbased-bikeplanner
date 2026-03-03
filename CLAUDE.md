@@ -67,6 +67,7 @@ ssh rgwnd 'cd /opt/rgwnd && docker compose logs -f backend'
 - **Always merge via Pull Request** — never rebase or force-push to main. Create a clean branch from `main`, work locally, push, and open a PR for review/merge.
 - Routing/algorithm changes → `dev/graph`; visual/UI changes → `dev/frontend`
 - Keep branches focused on one feature/fix
+- **CRITICAL: One feature per branch.** Always create a NEW branch from `main` for each feature. Never stack unrelated features on an existing feature branch — this makes cherry-picking and independent merging impossible. If you're on `feat/X` and asked to build `feat/Y`, checkout `main` first and create `feat/Y` from there.
 
 **Commits**
 - No `Co-Authored-By` trailer — commit as yourself
