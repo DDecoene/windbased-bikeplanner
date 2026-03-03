@@ -33,6 +33,18 @@
 		{
 			q: 'Waarom is mijn routeverzoek mislukt?',
 			a: 'Mogelijke redenen: het gebied heeft niet genoeg verbonden fietsknooppunten, de gewenste afstand is te kort of te lang voor het lokale netwerk, of een externe dienst (Overpass, Nominatim) is tijdelijk niet beschikbaar. Probeer je afstand of startadres aan te passen.'
+		},
+		{
+			q: 'Hoe koppel ik mijn Garmin?',
+			a: 'Genereer eerst een route. Klik vervolgens op "Koppel Garmin" bij de downloadknoppen. Je wordt doorgestuurd naar Garmin Connect om toestemming te geven. Dit hoef je maar één keer te doen.'
+		},
+		{
+			q: 'Welke Garmin toestellen worden ondersteund?',
+			a: 'Alle Garmin toestellen die synchroniseren met Garmin Connect, waaronder Edge fietscomputers, Forerunner en Fenix horloges.'
+		},
+		{
+			q: 'Verlopen gedeelde routelinks?',
+			a: 'Nee, gedeelde links verlopen nooit. De routegegevens zitten in de link zelf. Als het knooppuntennetwerk verandert, kan een oude route mogelijk niet meer worden weergegeven.'
 		}
 	];
 import Meta from '$lib/Meta.svelte';

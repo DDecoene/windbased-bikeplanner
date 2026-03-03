@@ -229,3 +229,127 @@ function _extractFilename(response: Response, fallback: string): string {
 	return fallback;
 }
 
+// --- Garmin ---
+
+export async function checkGarminLinked(authToken: string): Promise<boolean> {
+	const response = await fetch(`${API_URL}/garmin/status`, {
+		headers: { Authorization: `Bearer ${authToken}` }
+	});
+	if (response.status === 503) return false;
+	if (!response.ok) return false;
+	const data = (await response.json()) as { linked: boolean };
+	return data.linked;
+}
+
+export async function sendToGarmin(
+	routeId: string,
+	authToken: string
+): Promise<{ status: string; course_name: string }> {
+	const response = await fetch(`${API_URL}/garmin/upload/${routeId}`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${authToken}` }
+	});
+	if (response.status === 404) {
+		throw new Error('Route verlopen. Genereer een nieuwe route.');
+	}
+	if (response.status === 401) {
+		const relink = response.headers.get('X-Garmin-Relink');
+		if (relink) {
+			throw new Error('GARMIN_RELINK');
+		}
+		throw new Error('Garmin account niet gekoppeld.');
+	}
+	if (!response.ok) {
+		throw new Error('Garmin is niet bereikbaar. Probeer het later opnieuw.');
+	}
+	return (await response.json()) as { status: string; course_name: string };
+}
+
+export function getGarminAuthUrl(): string {
+	return `${API_URL}/garmin/auth`;
+}
+
+// --- Shareable routes ---
+
+export interface ShareableRoutePayload {
+	j: string[];
+	s: [number, number];
+	w: { s: number; d: number };
+	d: number;
+	a: string;
+}
+
+/**
+ * Encodes a route into a compressed base64url hash for sharing URLs.
+ */
+export async function encodeRoute(route: RouteResponse): Promise<string> {
+	const payload = {
+		j: route.junctions,
+		s: route.start_coords,
+		w: { s: route.wind_conditions.speed, d: route.wind_conditions.direction },
+		d: route.target_distance_km,
+		a: route.start_address
+	};
+	const json = new TextEncoder().encode(JSON.stringify(payload));
+
+	// Gzip compress using browser CompressionStream API
+	const cs = new CompressionStream('gzip');
+	const writer = cs.writable.getWriter();
+	writer.write(json);
+	writer.close();
+	const compressed = await new Response(cs.readable).arrayBuffer();
+
+	// Base64url encode (no padding)
+	const bytes = new Uint8Array(compressed);
+	let binary = '';
+	for (const b of bytes) binary += String.fromCharCode(b);
+	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Decodes a base64url hash back into a shareable route payload.
+ */
+export async function decodeRoute(hash: string): Promise<ShareableRoutePayload> {
+	const base64 = hash.replace(/-/g, '+').replace(/_/g, '/');
+	const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+	const binary = atob(padded);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+	// Gunzip decompress using browser DecompressionStream API
+	const ds = new DecompressionStream('gzip');
+	const writer = ds.writable.getWriter();
+	writer.write(bytes);
+	writer.close();
+	const decompressed = await new Response(ds.readable).arrayBuffer();
+
+	return JSON.parse(new TextDecoder().decode(decompressed));
+}
+
+/**
+ * Reconstructs a full route from a shareable route payload via the backend.
+ */
+export async function reconstructRoute(
+	payload: ShareableRoutePayload
+): Promise<RouteResponse> {
+	const res = await fetch(`${API_URL}/reconstruct-route`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			junctions: payload.j,
+			start_coords: payload.s,
+			wind_data: { speed: payload.w.s, direction: payload.w.d },
+			distance_km: payload.d,
+			address: payload.a
+		}),
+		signal: AbortSignal.timeout(120_000)
+	});
+
+	if (!res.ok) {
+		const body = await res.json().catch(() => null);
+		throw new Error(body?.detail || 'Kon de route niet reconstrueren.');
+	}
+
+	return res.json();
+}
+

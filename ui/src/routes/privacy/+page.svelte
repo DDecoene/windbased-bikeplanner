@@ -93,6 +93,57 @@
 		</section>
 
 		<section>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Garmin Connect</h2>
+			<p>
+				Als je je Garmin account koppelt aan RGWND, geldt het volgende:
+			</p>
+			<ul class="mt-2 list-inside list-disc space-y-1 text-gray-500">
+				<li>
+					<strong class="text-gray-400">OAuth-tokens</strong> — wanneer je je Garmin account koppelt,
+					slaan we OAuth-tokens op in je gebruikersprofiel om de verbinding te onderhouden
+				</li>
+				<li>
+					<strong class="text-gray-400">Routegegevens</strong> — worden alleen naar Garmin Connect
+					verstuurd wanneer je expliciet op "Stuur naar Garmin" klikt
+				</li>
+				<li>
+					<strong class="text-gray-400">Geen automatisch delen</strong> — er worden geen gegevens
+					automatisch gedeeld met Garmin
+				</li>
+			</ul>
+			<p class="mt-2">
+				Je kunt de koppeling op elk moment verwijderen. Garmin heeft zijn eigen <a
+					href="https://www.garmin.com/nl-BE/privacy/connect/policy/"
+					class="text-cyan-400 hover:underline"
+					target="_blank"
+					rel="noopener">privacybeleid</a
+				> voor Garmin Connect.
+			</p>
+		</section>
+
+		<section>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Gedeelde routelinks</h2>
+			<p>
+				Wanneer je een route deelt via de knop "Deel route", worden de routegegevens
+				(knooppuntnummers, startlocatie, windgegevens) in de URL zelf gecodeerd.
+			</p>
+			<ul class="mt-2 list-inside list-disc space-y-1 text-gray-500">
+				<li>
+					<strong class="text-gray-400">Geen serveropslag</strong> — de routegegevens worden niet
+					opgeslagen op onze servers. Alles zit in de link zelf.
+				</li>
+				<li>
+					<strong class="text-gray-400">Openbaar toegankelijk</strong> — iedereen met de link kan
+					de route bekijken, zonder account
+				</li>
+			</ul>
+			<p class="mt-2">
+				Houd er rekening mee dat de link je startlocatie en routegegevens bevat. Deel de link
+				alleen met mensen die je vertrouwt.
+			</p>
+		</section>
+
+		<section>
 			<h2 class="mb-1 text-base font-semibold text-gray-200">Geen gegevens verkocht of gedeeld</h2>
 			<p>
 				Wij verkopen, delen of dragen geen gebruikersgegevens over aan derden, buiten de hierboven

@@ -17,13 +17,14 @@ from fastapi_clerk_auth import HTTPAuthorizationCredentials
 from clerk_backend_api import Clerk
 
 from .auth import clerk_auth, clerk_auth_optional
-from .models import RouteRequest, RouteResponse, UsageResponse
-from . import analytics, routing
+from .models import ReconstructRequest, RouteRequest, RouteResponse, UsageResponse
+from . import analytics, reconstruct, routing
 from . import route_cache
 from . import gpx as gpx_module
 from . import image_gen
 from .graph_manager import GraphManager
 from .notify import send_alert
+from .garmin_routes import router as garmin_router
 # Stripe uitgeschakeld tot premium live gaat
 # from .stripe_routes import router as stripe_router
 
@@ -68,6 +69,7 @@ else:
     logger.info("Geen pre-built graph — Overpass fallback actief")
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+app.include_router(garmin_router)
 # app.include_router(stripe_router)  # Stripe uitgeschakeld
 
 @app.exception_handler(RateLimitExceeded)
@@ -95,7 +97,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["authorization", "content-type"],
-    expose_headers=["Content-Disposition"],
+    expose_headers=["Content-Disposition", "X-Garmin-Relink"],
 )
 
 
@@ -372,6 +374,95 @@ async def download_image(
         media_type="image/png",
         headers={"Content-Disposition": f'attachment; filename="rgwnd-{dist}km.png"'},
     )
+
+
+@app.post("/reconstruct-route", response_model=RouteResponse)
+@limiter.limit("10/minute")
+async def reconstruct_route(
+    request: Request,
+    body: ReconstructRequest,
+):
+    """Reconstrueer een route vanuit gedeelde knooppuntdata (geen auth vereist)."""
+    try:
+        route_data = reconstruct.reconstruct_route(
+            junctions=body.junctions,
+            start_coords=body.start_coords,
+            wind_data={"speed": body.wind_data.speed, "direction": body.wind_data.direction},
+            distance_km=body.distance_km,
+            address=body.address,
+        )
+
+        route_data["is_guest_route_2"] = False
+
+        # Cache for export endpoints (GPX/image)
+        route_id = route_cache.store(
+            route_data=route_data,
+            wind_data={
+                "speed": route_data["wind_conditions"]["speed"],
+                "direction": route_data["wind_conditions"]["direction"],
+            },
+        )
+        route_data["route_id"] = route_id
+
+        return RouteResponse(**route_data)
+    except reconstruct.ReconstructionError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Unexpected error in /reconstruct-route: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Er ging iets mis bij het reconstrueren van de route.",
+        )
+
+
+@app.get("/routes/preview-image")
+@limiter.limit("10/minute")
+async def preview_image(
+    request: Request,
+    r: str = Query(..., description="Base64url+gzip encoded route payload"),
+):
+    """Genereer een preview-afbeelding vanuit gecomprimeerde routedata (voor OG/share)."""
+    import base64
+    import gzip
+    import json
+
+    try:
+        # Decode: base64url → add padding → decode → gzip decompress → JSON
+        padded = r + "=" * (-len(r) % 4)
+        raw = base64.urlsafe_b64decode(padded)
+        payload = json.loads(gzip.decompress(raw))
+
+        junctions = payload["j"]
+        start_coords = tuple(payload["s"])
+        wind = payload["w"]
+        wind_data = {"speed": wind["s"], "direction": wind["d"]}
+        distance_km = payload["d"]
+        address = payload.get("a", "")
+
+        route_data = reconstruct.reconstruct_route(
+            junctions=junctions,
+            start_coords=start_coords,
+            wind_data=wind_data,
+            distance_km=distance_km,
+            address=address,
+        )
+
+        png_bytes = image_gen.generate_image(route_data, wind_data)
+        return Response(
+            content=png_bytes,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    except (ValueError, KeyError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail="Ongeldige routedata.")
+    except reconstruct.ReconstructionError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Unexpected error in /routes/preview-image: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Er ging iets mis bij het genereren van de preview.",
+        )
 
 
 @app.get("/health")

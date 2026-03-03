@@ -67,6 +67,7 @@ ssh rgwnd 'cd /opt/rgwnd && docker compose logs -f backend'
 - **Always merge via Pull Request** — never rebase or force-push to main. Create a clean branch from `main`, work locally, push, and open a PR for review/merge.
 - Routing/algorithm changes → `dev/graph`; visual/UI changes → `dev/frontend`
 - Keep branches focused on one feature/fix
+- **CRITICAL: One feature per branch.** Always create a NEW branch from `main` for each feature. Never stack unrelated features on an existing feature branch — this makes cherry-picking and independent merging impossible. If you're on `feat/X` and asked to build `feat/Y`, checkout `main` first and create `feat/Y` from there.
 
 **Commits**
 - No `Co-Authored-By` trailer — commit as yourself
@@ -82,7 +83,7 @@ When adding or changing any user-facing feature, these pages MUST be updated as 
 ## Architecture
 
 **Backend (`app/`)**
-- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required) and `GET /usage` (usage tracking). Export endpoints: `GET /routes/{route_id}/gpx` (30/min) and `GET /routes/{route_id}/image` (10/min) — both auth optional, return file downloads from cached route data. Fair use: 50 routes/week via Clerk privateMetadata, premium via JWT public_metadata claim. Fail-closed on Clerk API errors (blocks + Telegram alert). CORS hardened: `allow_methods=["GET", "POST", "OPTIONS"]`, `allow_headers=["authorization", "content-type"]` (configurable via `CORS_ORIGINS` env var). Rate-limited to 10 req/min per IP via slowapi. Guest route tracking per IP per day (2 free routes), with periodic cleanup. Structured logging configured here; Clerk exceptions sanitized (generic messages in alerts). Analytics: `POST /analytics/pageview` (no auth, 60/min rate limit), `GET /analytics/check-admin` (auth), `GET /analytics/summary` (admin only, date validation). Admin access controlled via `ANALYTICS_ADMIN_IDS` env var.
+- `main.py` — FastAPI app with `POST /generate-route` endpoint (Clerk JWT auth required) and `GET /usage` (usage tracking). Export endpoints: `GET /routes/{route_id}/gpx` (30/min) and `GET /routes/{route_id}/image` (10/min) — both auth optional, return file downloads from cached route data. Shareable route endpoints: `POST /reconstruct-route` (reconstruct route from junction refs, no auth) and `GET /routes/preview-image` (OG preview image for shared links, no auth). Fair use: 50 routes/week via Clerk privateMetadata, premium via JWT public_metadata claim. Fail-closed on Clerk API errors (blocks + Telegram alert). CORS hardened: `allow_methods=["GET", "POST", "OPTIONS"]`, `allow_headers=["authorization", "content-type"]` (configurable via `CORS_ORIGINS` env var). Rate-limited to 10 req/min per IP via slowapi. Guest route tracking per IP per day (2 free routes), with periodic cleanup. Structured logging configured here; Clerk exceptions sanitized (generic messages in alerts). Analytics: `POST /analytics/pageview` (no auth, 60/min rate limit), `GET /analytics/check-admin` (auth), `GET /analytics/summary` (admin only, date validation). Admin access controlled via `ANALYTICS_ADMIN_IDS` env var.
 - `auth.py` — Shared Clerk JWT auth config (extracted to avoid circular imports between main.py and stripe_routes.py).
 - `stripe_routes.py` — Stripe subscription endpoints (checkout, portal, webhook). Currently disabled in main.py — will be re-enabled when premium goes live.
 - `routing.py` — Core algorithm: geocode → fetch wind → build full RCN graph → build condensed knooppunt graph → DFS loop finder with distance-budget pruning → wind-effort scoring → expand to full geometry.
@@ -94,6 +95,10 @@ When adding or changing any user-facing feature, these pages MUST be updated as 
 - `gpx.py` — GPX XML generation from route data. Used by `GET /routes/{route_id}/gpx`. Cardinal direction conversion, XML escaping via stdlib.
 - `image_gen.py` — Cairo-based 1080x1080 PNG image generation (Strava sharing style). Used by `GET /routes/{route_id}/image`. Requires pycairo + system libcairo2-dev.
 - `notify.py` — Telegram alerting (Bot API). Silent no-op if `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` env vars not set. 5-minute deduplication.
+- `garmin.py` — Garmin Connect OAuth 2.0 PKCE + Course upload. Token storage/refresh via Clerk privateMetadata. Feature-flagged via `GARMIN_CLIENT_ID` env var.
+- `garmin_cache.py` — In-memory TTL cache (5 min) for OAuth PKCE state parameters.
+- `garmin_routes.py` — Garmin APIRouter: `/garmin/status` (link check), `/garmin/auth` (OAuth URL), `/garmin/callback` (OAuth callback), `/garmin/upload/{route_id}` (Course upload). All auth-gated except callback.
+- `reconstruct.py` — Route reconstruction from junction refs: fetches RCN graph for the area, finds shortest paths between consecutive junctions, returns full geometry. Used by `POST /reconstruct-route` for shareable route links.
 
 **Frontend (`ui/`)**
 - SvelteKit app (Svelte 5, Tailwind CSS v4, pnpm, adapter-node).
@@ -105,12 +110,13 @@ When adding or changing any user-facing feature, these pages MUST be updated as 
 - `src/lib/AuthHeader.svelte` — Fixed top-right auth UI (avatar when signed in, "Inloggen" link when signed out).
 - `src/routes/sign-in/[...rest]/+page.svelte` — Clerk SignIn component (dark themed).
 - `src/routes/sign-up/[...rest]/+page.svelte` — Clerk SignUp component (dark themed).
-- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. "Mijn locatie" geolocation button (crosshair icon in address input) — uses Browser Geolocation API, passes coords directly to backend. Auth check on submit with sessionStorage form persistence. Usage counter below submit button (X/50 routes deze week), disabled button when limit reached. Callout for unauthenticated users linking to /handleiding. Donation prompt after successful route generation (Buy Me a Coffee link; extra copy for routes >60km). Footer with Handleiding + Privacy + Contact links.
+- `src/routes/+page.svelte` — Form + Leaflet map with junction markers, direction arrows, radius circle, wind display, stats panel, GPX download, planned ride toggle with datetime picker + forecast confidence. "Mijn locatie" geolocation button (crosshair icon in address input) — uses Browser Geolocation API, passes coords directly to backend. Auth check on submit with sessionStorage form persistence. Usage counter below submit button (X/50 routes deze week), disabled button when limit reached. Callout for unauthenticated users linking to /handleiding. Donation prompt after successful route generation (Buy Me a Coffee link; extra copy for routes >60km). "Deel route" button encodes route data into compressed URL hash (`?r=...`) for sharing via Web Share API (mobile) or clipboard (desktop). Footer with Handleiding + Privacy + Contact links.
+- `src/routes/+page.server.ts` — Server load function: detects `?r=` query parameter, decodes compressed route hash, calls `POST /reconstruct-route` to rebuild route geometry, passes reconstructed route data to page for immediate display.
 - `src/routes/admin/+page.svelte` — Analytics admin dashboard. Auth-gated via `ANALYTICS_ADMIN_IDS` env var (checks Clerk JWT `sub`). Date range selector (presets + custom). Summary cards, performance metrics, SVG bar chart for duration/km trend (cyan bars, yellow for >20% above avg), pageview/route/referrer/UTM tables.
 - `src/routes/privacy/+page.svelte` — Privacy policy (Clerk auth disclosure, third-party API disclosure, anonymous pageview tracking disclosure).
 - `src/routes/contact/+page.svelte` — Contact page with email (`info@rgwnd.app`) and FAQ accordion (Svelte 5 `$state`).
-- `src/routes/handleiding/+page.svelte` — Dutch user manual: 6-step guide (account, form, results, GPX, planned ride, tips). Linked from footer and callout on homepage.
-- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token, `fetchUsage()` for usage tracking, `checkAdmin()` and `fetchAnalytics()` for admin dashboard, `downloadGpx()` and `downloadImage()` for backend export endpoints. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy). Stripe functions removed (dormant).
+- `src/routes/handleiding/+page.svelte` — Dutch user manual: 8-step guide (account, form, results, route sharing, GPX, Garmin, planned ride, tips). Linked from footer and callout on homepage.
+- `src/lib/api.ts` — API client with TypeScript types, 120s request timeout, optional Bearer auth token, `fetchUsage()` for usage tracking, `checkAdmin()` and `fetchAnalytics()` for admin dashboard, `downloadGpx()` and `downloadImage()` for backend export endpoints, `encodeRoute()` and `decodeRoute()` for URL hash compression/decompression of route data, `reconstructRoute()` for server-side route reconstruction from junction refs. Backend URL: `VITE_API_URL` if set, otherwise `/api` (for reverse proxy). Stripe functions removed (dormant).
 - `src/app.html` — Static OG/Twitter meta tags (Dutch, `og:locale=nl_BE`). PWA manifest + theme-color.
 
 **Docker**
@@ -120,7 +126,7 @@ When adding or changing any user-facing feature, these pages MUST be updated as 
 - `docker-compose.yml` — caddy:443 (128MB/0.25CPU), backend:8000 (512MB/1CPU), frontend:3000 (256MB/0.5CPU), watchdog (64MB/0.25CPU), named volumes for overpass_cache and analytics_data. Backend/frontend ports not exposed directly (Caddy proxies).
 - `certs/` — mkcert-generated localhost TLS certificates (gitignored). Generate with `mkcert -install && mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhost 127.0.0.1`.
 - `watchdog.sh` — Infrastructure health monitor (checks backend `/health` + frontend every 60s, alerts on status change).
-- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `ANALYTICS_ADMIN_IDS` (comma-separated Clerk user IDs), optionally `CORS_ORIGINS`, `OVERPASS_URL`.
+- `.env` / `.env.example` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `ANALYTICS_ADMIN_IDS` (comma-separated Clerk user IDs), optionally `CORS_ORIGINS`, `OVERPASS_URL`. Garmin: `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_REDIRECT_URI` (all optional — feature hidden when absent).
 
 ## Key Details
 

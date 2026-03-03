@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { RouteResponse, UsageInfo } from '$lib/api';
-	import { generateRoute, fetchUsage, downloadGpx, downloadImage } from '$lib/api';
+	import {
+		generateRoute,
+		fetchUsage,
+		downloadGpx,
+		downloadImage,
+		checkGarminLinked,
+		sendToGarmin,
+		getGarminAuthUrl,
+		encodeRoute,
+		decodeRoute,
+		reconstructRoute
+	} from '$lib/api';
 	import 'leaflet/dist/leaflet.css';
 	import { useClerkContext } from 'svelte-clerk';
 	import { goto } from '$app/navigation';
@@ -11,6 +22,7 @@
 
 	let L: typeof import('leaflet') | undefined;
 	const ctx = useClerkContext();
+	let { data } = $props();
 
 	// Form state
 	let startAddress: string = '';
@@ -24,6 +36,7 @@
 	let routeData: RouteResponse | null = null;
 	let loadingMessage: string = '';
 	let loadingInterval: ReturnType<typeof setInterval> | null = null;
+	let shareToastVisible: boolean = false;
 
 	// Usage tracking
 	let usageInfo: UsageInfo | null = null;
@@ -111,6 +124,10 @@
 	// --- Export handlers ---
 
 	let exportError: string | null = null;
+	let garminLinked = $state(false);
+	let garminSending = $state(false);
+	let garminSuccess = $state(false);
+	let garminAvailable = $state(false);
 
 	async function handleDownloadGPX(): Promise<void> {
 		if (!routeData?.route_id) return;
@@ -131,6 +148,71 @@
 			await downloadImage(routeData.route_id, token);
 		} catch (e: any) {
 			exportError = e.message;
+		}
+	}
+
+	async function handleShareRoute(): Promise<void> {
+		if (!routeData) return;
+		try {
+			const hash = await encodeRoute(routeData);
+			const shareUrl = `${window.location.origin}/?r=${hash}`;
+
+			if (navigator.share) {
+				await navigator.share({
+					title: `Rugwind route — ${routeData.actual_distance_km}km`,
+					text: `Bekijk mijn RGWND route: ${routeData.actual_distance_km}km met ${routeData.junctions.length - 1} knooppunten`,
+					url: shareUrl
+				});
+			} else {
+				await navigator.clipboard.writeText(shareUrl);
+				shareToastVisible = true;
+				setTimeout(() => (shareToastVisible = false), 3000);
+			}
+		} catch (e: any) {
+			if (e.name !== 'AbortError') {
+				errorMessage = 'Kon de deellink niet aanmaken.';
+			}
+		}
+	}
+
+	async function handleSendToGarmin(): Promise<void> {
+		if (!routeData?.route_id) return;
+		if (!garminLinked) {
+			const token = (await ctx.session?.getToken()) ?? null;
+			if (!token) return;
+			sessionStorage.setItem('rgwnd_garmin_route', routeData.route_id);
+			try {
+				const resp = await fetch(getGarminAuthUrl(), {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (!resp.ok) throw new Error('Kan Garmin niet bereiken');
+				const data = await resp.json();
+				window.location.href = data.url;
+			} catch (e: any) {
+				exportError = e.message;
+			}
+			return;
+		}
+		garminSending = true;
+		garminSuccess = false;
+		exportError = null;
+		try {
+			const token = (await ctx.session?.getToken()) ?? null;
+			if (!token) return;
+			await sendToGarmin(routeData.route_id, token);
+			garminSuccess = true;
+			setTimeout(() => {
+				garminSuccess = false;
+			}, 3000);
+		} catch (e: any) {
+			if (e.message === 'GARMIN_RELINK') {
+				garminLinked = false;
+				exportError = 'Garmin sessie verlopen. Koppel opnieuw.';
+			} else {
+				exportError = e.message;
+			}
+		} finally {
+			garminSending = false;
 		}
 	}
 
@@ -341,6 +423,61 @@
 			// Laad usage info als ingelogd
 			setTimeout(() => loadUsage(), 500);
 
+			// Check Garmin link status
+			if (ctx.isLoaded && ctx.auth?.userId) {
+				const token = (await ctx.session?.getToken()) ?? null;
+				if (token) {
+					checkGarminLinked(token)
+						.then((linked) => {
+							garminLinked = linked;
+							garminAvailable = true;
+						})
+						.catch(() => {
+							garminAvailable = false;
+						});
+				}
+			}
+
+			// Handle ?garmin= URL params from OAuth callback
+			const garminParam = new URLSearchParams(window.location.search).get('garmin');
+			if (garminParam === 'linked') {
+				garminLinked = true;
+				garminAvailable = true;
+			}
+			if (garminParam) {
+				const url = new URL(window.location.href);
+				url.searchParams.delete('garmin');
+				window.history.replaceState({}, '', url.toString());
+			}
+
+			// Handle ?r= shared route link
+			const routeParam = new URLSearchParams(window.location.search).get('r');
+			if (routeParam) {
+				// Clean the URL
+				const url = new URL(window.location.href);
+				url.searchParams.delete('r');
+				window.history.replaceState({}, '', url.toString());
+
+				// Reconstruct the shared route
+				isLoading = true;
+				startLoadingMessages();
+				try {
+					const payload = await decodeRoute(routeParam);
+					// Pre-fill form
+					startAddress = payload.a || '';
+					distanceKm = payload.d;
+
+					const data = await reconstructRoute(payload);
+					routeData = data;
+					drawRoute(data);
+				} catch (e: any) {
+					errorMessage = e.message || 'Kon de gedeelde route niet laden.';
+				} finally {
+					isLoading = false;
+					stopLoadingMessages();
+				}
+			}
+
 			// Check for pending route after sign-in redirect
 			const pendingRoute = sessionStorage.getItem('rgwnd_pending_route');
 			if (pendingRoute) {
@@ -531,11 +668,20 @@
 	}
 </script>
 
-<Meta
-	title="RGWND | Windgeoptimaliseerde fietslussen in België"
-	description="Ben je ook wind op kop beu? Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
-	path="/"
-/>
+{#if data?.sharedRoute}
+	<Meta
+		title="Rugwind route — {data.sharedRoute.distance}km{data.sharedRoute.address ? ` vanuit ${data.sharedRoute.address}` : ''}"
+		description="Route met {data.sharedRoute.junctionCount} knooppunten, berekend voor rugwind op het Belgische fietsknooppuntennetwerk."
+		path="/?r={data.sharedRoute.hash}"
+		image="/api/routes/preview-image?r={data.sharedRoute.hash}"
+	/>
+{:else}
+	<Meta
+		title="RGWND | Windgeoptimaliseerde fietslussen in België"
+		description="Ben je ook wind op kop beu? Windgeoptimaliseerde fietslussen via het Belgische knooppuntennetwerk."
+		path="/"
+	/>
+{/if}
 
 <main class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
 	<!-- Header -->
@@ -951,6 +1097,108 @@
 					</svg>
 					Deel afbeelding
 				</button>
+				<button
+					type="button"
+					on:click={handleShareRoute}
+					class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-2.5 text-sm font-medium text-gray-300 transition hover:border-cyan-500/50 hover:text-cyan-400"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+						/>
+					</svg>
+					Deel route
+				</button>
+				{#if garminAvailable && ctx.auth?.userId}
+					<button
+						type="button"
+						on:click={handleSendToGarmin}
+						disabled={garminSending}
+						class="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors {garminSuccess
+							? 'bg-green-600 text-white'
+							: garminLinked
+								? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700'
+								: 'border border-gray-600 text-gray-300 hover:border-cyan-500 hover:text-cyan-400'}"
+					>
+						{#if garminSending}
+							<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+								<circle
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+									class="opacity-25"
+								/>
+								<path
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+									class="opacity-75"
+								/>
+							</svg>
+							Versturen...
+						{:else if garminSuccess}
+							<svg
+								class="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M5 13l4 4L19 7"
+								/>
+							</svg>
+							Verstuurd!
+						{:else if garminLinked}
+							<svg
+								class="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+								/>
+							</svg>
+							Stuur naar Garmin
+						{:else}
+							<svg
+								class="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M10.172 13.828a4 4 0 015.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101"
+								/>
+							</svg>
+							Koppel Garmin
+						{/if}
+					</button>
+				{/if}
 			</div>
 			{#if exportError}
 				<p class="text-xs text-red-400">{exportError}</p>
@@ -1013,6 +1261,14 @@
 			class="aspect-square w-full overflow-hidden rounded-lg ring-1 ring-gray-800"
 		></div>
 	</div>
+
+	{#if shareToastVisible}
+		<div
+			class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white shadow-lg"
+		>
+			Link gekopieerd!
+		</div>
+	{/if}
 </main>
 
 <footer class="mx-auto w-full max-w-5xl px-4 pt-2 pb-6 text-center text-xs text-gray-600">

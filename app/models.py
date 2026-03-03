@@ -35,6 +35,14 @@ class WindData(BaseModel):
     speed: float = Field(..., description="Wind speed in m/s")
     direction: float = Field(..., description="Wind direction in degrees")
 
+class ReconstructRequest(BaseModel):
+    """Request body for route reconstruction from shared link data."""
+    junctions: List[str] = Field(..., min_length=3, max_length=100)
+    start_coords: Tuple[float, float]
+    wind_data: WindData
+    distance_km: float = Field(..., gt=0, le=200)
+    address: str = Field("", max_length=200)
+
 class JunctionCoord(BaseModel):
     ref: str
     lat: float
