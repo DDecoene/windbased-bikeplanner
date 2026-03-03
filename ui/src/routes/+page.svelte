@@ -539,7 +539,7 @@
 
 <main class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 p-4 font-sans antialiased">
 	<!-- Header -->
-	<header class="shrink-0 text-center">
+	<header class="shrink-0 pt-12 text-center sm:pt-0">
 		<h1
 			class="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent"
 		>
