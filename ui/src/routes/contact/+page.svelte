@@ -41,6 +41,10 @@
 		{
 			q: 'Welke Garmin toestellen worden ondersteund?',
 			a: 'Alle Garmin toestellen die synchroniseren met Garmin Connect, waaronder Edge fietscomputers, Forerunner en Fenix horloges.'
+		},
+		{
+			q: 'Verlopen gedeelde routelinks?',
+			a: 'Nee, gedeelde links verlopen nooit. De routegegevens zitten in de link zelf. Als het knooppuntennetwerk verandert, kan een oude route mogelijk niet meer worden weergegeven.'
 		}
 	];
 import Meta from '$lib/Meta.svelte';

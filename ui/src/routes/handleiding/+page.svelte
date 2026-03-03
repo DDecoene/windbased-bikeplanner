@@ -159,10 +159,36 @@
 		</div>
 	</section>
 
-	<!-- Stap 5: GPX downloaden -->
+	<!-- Stap 5: Route delen -->
 	<section class="flex flex-col gap-4">
 		<div class="flex items-center gap-3">
 			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">5</span>
+			<h2 class="text-lg font-semibold text-gray-200">Route delen</h2>
+		</div>
+		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">
+			<p>Na het genereren van een route kun je deze eenvoudig delen met anderen via de knop <span class="font-medium text-gray-200">Deel route</span>.</p>
+			<ol class="mt-3 flex flex-col gap-2">
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>Op je <span class="text-gray-200">smartphone</span> opent het deelmenu van je toestel — deel via WhatsApp, e-mail, Messenger of een andere app.</span>
+				</li>
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>Op <span class="text-gray-200">desktop</span> wordt de link automatisch naar je klembord gekopieerd, klaar om te plakken.</span>
+				</li>
+				<li class="flex gap-2">
+					<span class="mt-0.5 shrink-0 text-cyan-500">→</span>
+					<span>Iedereen die de link opent ziet dezelfde route op de kaart — <span class="text-gray-200">geen account nodig</span>.</span>
+				</li>
+			</ol>
+			<p class="mt-3 text-xs text-gray-500">Gedeelde links verlopen nooit. De routegegevens zitten in de link zelf, er wordt niets opgeslagen op de server.</p>
+		</div>
+	</section>
+
+	<!-- Stap 6: GPX downloaden -->
+	<section class="flex flex-col gap-4">
+		<div class="flex items-center gap-3">
+			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">6</span>
 			<h2 class="text-lg font-semibold text-gray-200">GPX downloaden voor je fietscomputer</h2>
 		</div>
 		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">
@@ -177,10 +203,10 @@
 		</div>
 	</section>
 
-	<!-- Stap 6: Stuur naar Garmin -->
+	<!-- Stap 7: Stuur naar Garmin -->
 	<section class="flex flex-col gap-4">
 		<div class="flex items-center gap-3">
-			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">6</span>
+			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">7</span>
 			<h2 class="text-lg font-semibold text-gray-200">Stuur naar Garmin</h2>
 		</div>
 		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">
@@ -207,10 +233,10 @@
 		</div>
 	</section>
 
-	<!-- Stap 7: Geplande rit -->
+	<!-- Stap 8: Geplande rit -->
 	<section class="flex flex-col gap-4">
 		<div class="flex items-center gap-3">
-			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">7</span>
+			<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-bold text-cyan-400">8</span>
 			<h2 class="text-lg font-semibold text-gray-200">Geplande rit (toekomstige wind)</h2>
 		</div>
 		<div class="rounded-xl border border-gray-800 bg-gray-900/80 p-5 text-sm leading-relaxed text-gray-400">

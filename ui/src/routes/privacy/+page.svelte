@@ -122,6 +122,28 @@
 		</section>
 
 		<section>
+			<h2 class="mb-1 text-base font-semibold text-gray-200">Gedeelde routelinks</h2>
+			<p>
+				Wanneer je een route deelt via de knop "Deel route", worden de routegegevens
+				(knooppuntnummers, startlocatie, windgegevens) in de URL zelf gecodeerd.
+			</p>
+			<ul class="mt-2 list-inside list-disc space-y-1 text-gray-500">
+				<li>
+					<strong class="text-gray-400">Geen serveropslag</strong> — de routegegevens worden niet
+					opgeslagen op onze servers. Alles zit in de link zelf.
+				</li>
+				<li>
+					<strong class="text-gray-400">Openbaar toegankelijk</strong> — iedereen met de link kan
+					de route bekijken, zonder account
+				</li>
+			</ul>
+			<p class="mt-2">
+				Houd er rekening mee dat de link je startlocatie en routegegevens bevat. Deel de link
+				alleen met mensen die je vertrouwt.
+			</p>
+		</section>
+
+		<section>
 			<h2 class="mb-1 text-base font-semibold text-gray-200">Geen gegevens verkocht of gedeeld</h2>
 			<p>
 				Wij verkopen, delen of dragen geen gebruikersgegevens over aan derden, buiten de hierboven
