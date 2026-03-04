@@ -71,6 +71,14 @@
       "province": "West-Vlaanderen",
       "strategy": "wind-reactive",
       "character_count": 120
+    },
+    {
+      "text": "Vrijdag in Antwerpen wordt zalig: 19°C, nauwelijks wind, droog. Plan nu al je knooppuntenroute op rgwnd en trap er vrijdag op los.",
+      "date": "2026-03-04T08:42:04.001929",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mg7v7pkdj62d",
+      "province": "Antwerpen",
+      "strategy": "forecast-teaser",
+      "character_count": 130
     }
   ]
 }
