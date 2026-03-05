@@ -79,6 +79,14 @@
       "province": "Antwerpen",
       "strategy": "forecast-teaser",
       "character_count": 130
+    },
+    {
+      "text": "Vrijdag in Leuven: 20°C, 7 km/u wind, droog. De ideale dag voor een knooppuntenroute met rugwind. Plan nu op rgwnd en geniet van perfecte omstandigheden.",
+      "date": "2026-03-05T08:46:12.344243",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mgcfvzsxun2y",
+      "province": "Vlaams-Brabant",
+      "strategy": "forecast-teaser",
+      "character_count": 153
     }
   ]
 }
