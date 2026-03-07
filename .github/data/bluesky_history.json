@@ -87,6 +87,14 @@
       "province": "Vlaams-Brabant",
       "strategy": "forecast-teaser",
       "character_count": 153
+    },
+    {
+      "text": "Vandaag in Brugge: 8 km/u wind uit het noorden. Ideaal voor een lusroute naar het zuiden op rgwnd — wind in je rug heen!",
+      "date": "2026-03-07T08:35:15.731201",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mghgacl6f326",
+      "province": "West-Vlaanderen",
+      "strategy": "wind-reactive",
+      "character_count": 120
     }
   ]
 }
