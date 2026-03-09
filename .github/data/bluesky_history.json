@@ -103,6 +103,14 @@
       "province": "Oost-Vlaanderen",
       "strategy": "best-day-of-week",
       "character_count": 109
+    },
+    {
+      "text": "Antwerpen vandaag: 19°C, 12,6 km/u wind uit het zuiden. Ideaal voor een knooppuntenroute op rgwnd met rugwind op de terugweg!",
+      "date": "2026-03-09T08:50:11.832468",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mgmhyu3vmf2j",
+      "province": "Antwerpen",
+      "strategy": "wind-reactive",
+      "character_count": 125
     }
   ]
 }
