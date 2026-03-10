@@ -111,6 +111,14 @@
       "province": "Antwerpen",
       "strategy": "wind-reactive",
       "character_count": 125
+    },
+    {
+      "text": "Vandaag veel regen in Leuven. Zaterdag: 9.6°C, 11 km/u wind, bijna droog. Plan je route nu op rgwnd.",
+      "date": "2026-03-10T08:47:33.834658",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mgoyd2vdjt2j",
+      "province": "Vlaams-Brabant",
+      "strategy": "contrarian-weather",
+      "character_count": 100
     }
   ]
 }
