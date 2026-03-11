@@ -119,6 +119,14 @@
       "province": "Vlaams-Brabant",
       "strategy": "contrarian-weather",
       "character_count": 100
+    },
+    {
+      "text": "Regen in Limburg vandaag? Dinsdag ziet er heel anders uit: 11.6°C, fijne 14 km/u wind, droog weer. Plan je rit nu op rgwnd.",
+      "date": "2026-03-11T08:45:27.331715",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mgrio7peui2i",
+      "province": "Limburg",
+      "strategy": "contrarian-weather",
+      "character_count": 123
     }
   ]
 }
