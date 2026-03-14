@@ -127,6 +127,14 @@
       "province": "Limburg",
       "strategy": "contrarian-weather",
       "character_count": 123
+    },
+    {
+      "text": "Beste fietsdag deze week in Antwerpen? Donderdag: 14,6°C, wind uit het noordoosten op 11,9 km/u, 0% regen. Plan je knooppuntenroute op rgwnd en geniet.",
+      "date": "2026-03-14T08:38:33.844685",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mgyzonqopm2i",
+      "province": "Antwerpen",
+      "strategy": "best-day-of-week",
+      "character_count": 151
     }
   ]
 }
