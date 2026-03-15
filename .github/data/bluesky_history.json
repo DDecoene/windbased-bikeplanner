@@ -135,6 +135,14 @@
       "province": "Antwerpen",
       "strategy": "best-day-of-week",
       "character_count": 151
+    },
+    {
+      "text": "Beste fietsdag deze week in Leuven? Donderdag. 16°C, 8 km/u wind, droog. Plan je knooppuntenroute op rgwnd.",
+      "date": "2026-03-15T08:39:52.979539",
+      "platform_id": "at://did:plc:5d55jhmiarf7tb7hmk775uhj/app.bsky.feed.post/3mh3k7wp6to27",
+      "province": "Vlaams-Brabant",
+      "strategy": "best-day-of-week",
+      "character_count": 107
     }
   ]
 }
